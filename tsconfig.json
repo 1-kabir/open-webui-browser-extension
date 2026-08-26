@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowJs": false,
+    "types": ["node", "chrome", "webextension-polyfill"],
+    "lib": ["ESNext", "DOM"]
+  },
+  "include": ["src", "tests", "vite.config.ts"]
+}

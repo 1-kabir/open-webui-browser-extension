@@ -1,0 +1,75 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #202124;
+  background: #f7f7f8;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 280px;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.toolbar {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border-bottom: 1px solid #ddd;
+  background: white;
+}
+.toolbar select {
+  flex: 1;
+  min-width: 0;
+}
+.toolbar button,
+.context button {
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.5rem;
+}
+iframe {
+  flex: 1;
+  width: 100%;
+  min-height: 70vh;
+  border: 0;
+  background: white;
+}
+.empty,
+.settings {
+  padding: 1rem;
+}
+.context {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+  background: #fff;
+}
+.context-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.8rem;
+}
+input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.4rem;
+}
+form {
+  display: grid;
+  gap: 0.5rem;
+}

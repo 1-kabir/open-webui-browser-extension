@@ -1,0 +1,40 @@
+{
+  "name": "open-webui-browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A privacy-first cross-browser extension for Open WebUI.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build": "npm run clean && npm run build:chromium && npm run build:firefox",
+    "build:chromium": "vite build --mode chromium",
+    "build:firefox": "vite build --mode firefox",
+    "clean": "rm -rf dist",
+    "dev": "vite --mode chromium",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "svelte": "^5.45.6",
+    "webextension-polyfill": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.280",
+    "@types/node": "^26.3.0",
+    "@types/webextension-polyfill": "^0.12.3",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-svelte": "^3.23.0",
+    "prettier": "^3.7.4",
+    "prettier-plugin-svelte": "^3.4.0",
+    "svelte-eslint-parser": "^1.8.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6",
+    "vitest": "^4.0.15"
+  }
+}
