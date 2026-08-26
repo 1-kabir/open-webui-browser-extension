@@ -6,7 +6,8 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
-    "build": "npm run clean && npm run build:chromium && npm run build:firefox",
+    "build": "npm run clean && npm run build:chromium && npm run build:firefox && npm run verify:build",
+    "verify:build": "node scripts/verify-build.mjs",
     "build:chromium": "vite build --mode chromium",
     "build:firefox": "vite build --mode firefox",
     "clean": "rm -rf dist",
