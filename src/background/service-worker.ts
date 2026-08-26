@@ -29,10 +29,14 @@ browser.runtime.onMessage.addListener(async (message: any) => {
       case 'settings:get':
         return getSettings()
       case 'connections:add':
+        if (!message.input || typeof message.input !== 'object')
+          throw new Error('Invalid connection details.')
         return addConnection(message.input)
       case 'connections:remove':
+        if (!isId(message.id)) throw new Error('Invalid connection ID.')
         return removeConnection(message.id)
       case 'connections:set-default':
+        if (!isId(message.id)) throw new Error('Invalid connection ID.')
         return setDefaultConnection(message.id)
       case 'capabilities:get':
         return capabilities()
@@ -48,6 +52,11 @@ browser.runtime.onMessage.addListener(async (message: any) => {
       case 'capture:visible':
         if (!(await requestPermission('activeTab')))
           throw new Error('Screenshot permission was not granted.')
+        if (
+          message.windowId !== undefined &&
+          !Number.isInteger(message.windowId)
+        )
+          throw new Error('Invalid window ID.')
         return captureVisibleTab(message.windowId)
       case 'context:list':
         return listContext()

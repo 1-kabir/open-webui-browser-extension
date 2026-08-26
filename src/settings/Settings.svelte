@@ -50,11 +50,35 @@
     }
   }
   async function remove(connection: Connection) {
-    await browser.runtime.sendMessage({
-      type: 'connections:remove',
-      id: connection.id
-    })
-    settings = await browser.runtime.sendMessage({ type: 'settings:get' })
+    error = ''
+    try {
+      const result = await browser.runtime.sendMessage({
+        type: 'connections:remove',
+        id: connection.id
+      })
+      if (result?.error) throw new Error(result.error)
+      settings = await browser.runtime.sendMessage({ type: 'settings:get' })
+    } catch (cause) {
+      error =
+        cause instanceof Error ? cause.message : 'Unable to remove connection.'
+    }
+  }
+
+  async function makeDefault(connection: Connection) {
+    error = ''
+    try {
+      const result = await browser.runtime.sendMessage({
+        type: 'connections:set-default',
+        id: connection.id
+      })
+      if (result?.error) throw new Error(result.error)
+      settings = result as Settings
+    } catch (cause) {
+      error =
+        cause instanceof Error
+          ? cause.message
+          : 'Unable to select default connection.'
+    }
   }
   load()
 </script>
@@ -92,8 +116,17 @@
     </p>{/if}{#each settings.connections as connection}<div
       class="context-item"
     >
-      <span>{connection.name}<br /><small>{connection.url}</small></span><button
-        onclick={() => remove(connection)}>Remove</button
-      >
+      <span>
+        {connection.name}<br /><small>{connection.url}</small>
+        {#if settings.defaultConnectionId === connection.id}<br /><small
+            >Default connection</small
+          >{/if}
+      </span>
+      <span class="actions">
+        {#if settings.defaultConnectionId !== connection.id}<button
+            onclick={() => makeDefault(connection)}>Use by default</button
+          >{/if}
+        <button onclick={() => remove(connection)}>Remove</button>
+      </span>
     </div>{/each}
 </div>
