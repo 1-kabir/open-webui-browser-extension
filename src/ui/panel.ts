@@ -130,6 +130,25 @@ export async function remove(item: ContextItem): Promise<ContextItem[]> {
   return browser.runtime.sendMessage({ type: 'context:remove', id: item.id })
 }
 
+export async function pin(
+  item: ContextItem,
+  pinned: boolean
+): Promise<ContextItem[]> {
+  return browser.runtime.sendMessage({
+    type: 'context:pin',
+    id: item.id,
+    pinned
+  })
+}
+
+export async function clearUnpinned(): Promise<ContextItem[]> {
+  return browser.runtime.sendMessage({ type: 'context:clear-unpinned' })
+}
+
+export async function clearAll(): Promise<ContextItem[]> {
+  return browser.runtime.sendMessage({ type: 'context:clear' })
+}
+
 export async function setDefault(connection: Connection): Promise<Settings> {
   return browser.runtime.sendMessage({
     type: 'connections:set-default',

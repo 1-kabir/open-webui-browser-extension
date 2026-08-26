@@ -18,7 +18,8 @@ import {
   listContext,
   removeContext,
   pinContext,
-  stageContext
+  stageContext,
+  clearUnpinnedContext
 } from './context-manager'
 browser.runtime.onInstalled.addListener(() => {
   void getSettings()
@@ -76,6 +77,8 @@ browser.runtime.onMessage.addListener(async (message: any) => {
         return pinContext(message.id, message.pinned !== false)
       case 'context:clear':
         return clearContext()
+      case 'context:clear-unpinned':
+        return clearUnpinnedContext()
       case 'page:read': {
         if (
           !(await requestPermission('activeTab')) ||

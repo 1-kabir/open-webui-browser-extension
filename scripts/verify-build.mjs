@@ -33,6 +33,8 @@ for (const [target, expected] of Object.entries(targets)) {
     throw new Error(`${target}: storage permission is required`)
   if (manifest.host_permissions?.length)
     throw new Error(`${target}: unexpected host permissions`)
+  if (!manifest.content_scripts?.[0]?.js?.includes('content.js'))
+    throw new Error(`${target}: content script is not registered`)
   if (Boolean(manifest.side_panel) !== expected.sidePanel)
     throw new Error(`${target}: side panel manifest mismatch`)
   if (Boolean(manifest.sidebar_action) !== expected.sidebar)

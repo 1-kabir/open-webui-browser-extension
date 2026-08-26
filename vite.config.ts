@@ -15,6 +15,14 @@ const manifest = (mode: string) => ({
   ],
   optional_permissions: ['activeTab', 'scripting', 'clipboardRead'],
   optional_host_permissions: ['http://*/*', 'https://*/*'],
+  content_scripts: [
+    {
+      matches: ['http://*/*', 'https://*/*'],
+      js: ['content.js'],
+      run_at: 'document_start',
+      all_frames: false
+    }
+  ],
   action: { default_title: 'Open WebUI' },
   background:
     mode === 'firefox'
