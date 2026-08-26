@@ -31,12 +31,6 @@ const manifest = (mode: string) => ({
           open_at_install: false
         }
       : undefined,
-  content_scripts: [
-    { matches: ['<all_urls>'], js: ['content.js'], run_at: 'document_idle' }
-  ],
-  web_accessible_resources: [
-    { resources: ['*.js', '*.css'], matches: ['<all_urls>'] }
-  ],
   browser_specific_settings:
     mode === 'firefox'
       ? {
