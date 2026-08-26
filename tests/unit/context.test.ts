@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   clearContext,
   listContext,
+  pinContext,
   removeContext,
+  setContext,
   stageContext
 } from '../../src/background/context-manager'
 import type { ContextItem } from '../../src/shared/types'
@@ -35,5 +37,12 @@ describe('context manager', () => {
     for (let i = 0; i < 25; i++) stageContext(item(String(i), String(i)))
     expect(listContext()).toHaveLength(20)
     expect(listContext()[0].id).toBe('5')
+  })
+  it('pins and deduplicates items when replacing state', () => {
+    stageContext(item('one', 'one'))
+    expect(pinContext('one')).toEqual([{ ...item('one', 'one'), pinned: true }])
+    setContext([item('two', 'two'), item('two', 'two')])
+    expect(listContext()).toHaveLength(1)
+    expect(listContext()[0].id).toBe('two')
   })
 })

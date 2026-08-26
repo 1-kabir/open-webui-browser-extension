@@ -128,6 +128,17 @@ browser.runtime.onMessage.addListener(async (message: any) => {
         })
         return result[0]?.result
       }
+      case 'theme:get':
+        return (await getSettings()).theme
+      case 'navigation:get': {
+        const [tab] = await browser.tabs.query({
+          active: true,
+          currentWindow: true
+        })
+        return tab?.id == null
+          ? null
+          : { title: tab.title ?? '', url: tab.url ?? '' }
+      }
       case 'connection:validate': {
         // Syntax validation is intentionally local. A remote fetch would require
         // broad host permissions before the user has approved a destination.

@@ -31,7 +31,8 @@ export function clearContext(): ContextItem[] {
   return []
 }
 export function setContext(items: ContextItem[]): ContextItem[] {
-  staged = items.slice(-MAX_ITEMS)
+  staged = []
+  for (const item of items) stageContext(item)
   return listContext()
 }
 export function clearUnpinnedContext(): ContextItem[] {

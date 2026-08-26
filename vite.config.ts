@@ -13,13 +13,8 @@ const manifest = (mode: string) => ({
     'tabs',
     ...(mode === 'chromium' ? ['sidePanel'] : [])
   ],
-  optional_permissions: [
-    'activeTab',
-    'scripting',
-    'clipboardRead',
-    'tabCapture'
-  ],
-  host_permissions: [],
+  optional_permissions: ['activeTab', 'scripting', 'clipboardRead'],
+  optional_host_permissions: ['http://*/*', 'https://*/*'],
   action: { default_title: 'Open WebUI' },
   background:
     mode === 'firefox'
