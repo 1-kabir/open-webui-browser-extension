@@ -11,7 +11,7 @@ import { readTabs } from '../browser/tabs'
 import { readClipboardText } from '../browser/clipboard'
 import { captureVisibleTab } from '../browser/capture'
 import { LIMITS } from '../shared/limits'
-import { requestPermission } from './permission-manager'
+import { hasPermission, requestPermission } from './permission-manager'
 import { isContextItem, isId, isTabIds } from '../shared/message-validation'
 import {
   clearContext,
@@ -142,6 +142,12 @@ browser.runtime.onMessage.addListener(async (message: any) => {
           ? null
           : { title: tab.title ?? '', url: tab.url ?? '' }
       }
+      case 'permissions:get':
+        return {
+          activeTab: await hasPermission('activeTab'),
+          scripting: await hasPermission('scripting'),
+          clipboardRead: await hasPermission('clipboardRead')
+        }
       case 'connection:validate': {
         // Syntax validation is intentionally local. A remote fetch would require
         // broad host permissions before the user has approved a destination.
