@@ -1,7 +1,15 @@
 <script lang="ts">
   import browser from 'webextension-polyfill'
   import type { ContextItem, Settings } from '../shared/types'
-  import { loadPanelState, readPageContext, remove, stage } from '../ui/panel'
+  import {
+    loadPanelState,
+    readClipboardContext,
+    readPageContext,
+    readScreenshotContext,
+    readTabsContext,
+    remove,
+    stage
+  } from '../ui/panel'
 
   let settings: Settings = {
     connections: [],
@@ -33,11 +41,10 @@
     }
   }
 
-  async function addContext() {
+  async function addContext(mode: 'page' | 'selection' | 'html' = 'page') {
     error = ''
     try {
-      const item = await readPageContext()
-      context = await stage(item)
+      context = await stage(await readPageContext(mode))
     } catch (cause) {
       error =
         cause instanceof Error ? cause.message : 'Unable to read this page.'
@@ -100,11 +107,52 @@
     </div>
   {/if}
 
-  <div class="toolbar">
-    <button onclick={addContext} disabled={loading}>Read this page</button>
-    {#if active}
-      <button onclick={openInTab}>Open in tab</button>
-    {/if}
+  <div class="toolbar actions" aria-label="Context actions">
+    <button onclick={() => addContext('page')} disabled={loading}
+      >Read page</button
+    >
+    <button onclick={() => addContext('selection')} disabled={loading}
+      >Read selection</button
+    >
+    <button
+      onclick={async () => {
+        error = ''
+        try {
+          context = await stage(await readClipboardContext())
+        } catch (cause) {
+          error =
+            cause instanceof Error ? cause.message : 'Unable to read clipboard.'
+        }
+      }}
+      disabled={loading}>Read clipboard</button
+    >
+    <button
+      onclick={async () => {
+        error = ''
+        try {
+          context = await stage(await readTabsContext())
+        } catch (cause) {
+          error =
+            cause instanceof Error ? cause.message : 'Unable to read tabs.'
+        }
+      }}
+      disabled={loading}>Read tabs</button
+    >
+    <button
+      onclick={async () => {
+        error = ''
+        try {
+          context = await stage(await readScreenshotContext())
+        } catch (cause) {
+          error =
+            cause instanceof Error
+              ? cause.message
+              : 'Unable to capture the tab.'
+        }
+      }}
+      disabled={loading}>Screenshot</button
+    >
+    {#if active}<button onclick={openInTab}>Open in tab</button>{/if}
   </div>
 
   {#if error}<p class="notice" role="alert">{error}</p>{/if}

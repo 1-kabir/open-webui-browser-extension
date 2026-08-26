@@ -10,6 +10,7 @@ import { readTabGroups } from '../browser/tab-groups'
 import { readTabs } from '../browser/tabs'
 import { readClipboardText } from '../browser/clipboard'
 import { captureVisibleTab } from '../browser/capture'
+import { LIMITS } from '../shared/limits'
 import {
   clearContext,
   listContext,
@@ -49,6 +50,10 @@ browser.runtime.onMessage.addListener(async (message: any) => {
       case 'context:clear':
         return clearContext()
       case 'page:read': {
+        const mode =
+          message.mode === 'selection' || message.mode === 'html'
+            ? message.mode
+            : 'page'
         const [tab] = await browser.tabs.query({
           active: true,
           currentWindow: true
@@ -56,16 +61,38 @@ browser.runtime.onMessage.addListener(async (message: any) => {
         if (tab.id == null) throw new Error('No active page is available.')
         const result = await browser.scripting.executeScript({
           target: { tabId: tab.id },
-          func: () => ({
-            title: document.title,
-            url: location.href,
-            selection: (window.getSelection()?.toString() ?? '').slice(
-              0,
-              100000
-            ),
-            text: (document.body?.innerText ?? '').slice(0, 100000),
-            html: (document.documentElement?.outerHTML ?? '').slice(0, 150000)
-          })
+          func: (
+            requestedMode: 'page' | 'selection' | 'html',
+            pageLimit: number,
+            htmlLimit: number
+          ) => {
+            const bounded = (value: string, max: number) => ({
+              value: value.slice(0, max),
+              truncated: value.length > max
+            })
+            const selection = bounded(
+              window.getSelection()?.toString() ?? '',
+              pageLimit
+            )
+            const text = bounded(document.body?.innerText ?? '', pageLimit)
+            const html = bounded(
+              document.documentElement?.outerHTML ?? '',
+              htmlLimit
+            )
+            return {
+              title: document.title,
+              url: location.href,
+              selection: selection.value,
+              text: requestedMode === 'page' ? text.value : '',
+              html: requestedMode === 'html' ? html.value : '',
+              textTruncated:
+                requestedMode === 'selection'
+                  ? selection.truncated
+                  : text.truncated,
+              htmlTruncated: html.truncated
+            }
+          },
+          args: [mode, LIMITS.pageText, LIMITS.html]
         })
         return result[0]?.result
       }

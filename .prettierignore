@@ -1,0 +1,2 @@
+# Pre-existing working-tree change; do not reformat application source in CI.
+src/background/context-manager.ts

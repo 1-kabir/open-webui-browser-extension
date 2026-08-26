@@ -6,10 +6,11 @@ A privacy-first cross-browser extension for connecting to existing Open WebUI se
 
 ```bash
 npm install
-npm run typecheck
-npm test
+npm run validate
 npm run build
 ```
+
+`npm run validate` runs the formatting check, ESLint, TypeScript, and the unit tests. The same quality gate runs in GitHub Actions for pull requests and pushes to `main`. See [docs/ci-cd.md](docs/ci-cd.md) for release and security workflow details.
 
 Load `dist/chromium` as an unpacked extension in a Chromium browser or `dist/firefox` temporarily in Firefox. The extension does not install or launch Open WebUI locally.
 

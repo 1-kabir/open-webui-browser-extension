@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build release bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate and build
+        run: npm run validate && npm run build
+
+      - name: Package browser bundles
+        run: |
+          cd dist
+          zip -qr ../open-webui-browser-extension-chromium-${GITHUB_REF_NAME}.zip chromium
+          zip -qr ../open-webui-browser-extension-firefox-${GITHUB_REF_NAME}.zip firefox
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${GITHUB_REF_NAME}"
+          open-webui-browser-extension-chromium-${GITHUB_REF_NAME}.zip
+          open-webui-browser-extension-firefox-${GITHUB_REF_NAME}.zip
+          --generate-notes
+          --verify-tag
