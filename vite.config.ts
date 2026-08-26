@@ -19,15 +19,15 @@ const manifest = (mode: string) => ({
   host_permissions: [],
   action: { default_title: 'Open WebUI' },
   background: { service_worker: 'background.js', type: 'module' },
-  options_ui: { page: 'src/settings/index.html', open_in_tab: true },
+  options_ui: { page: 'settings/index.html', open_in_tab: true },
   ...(mode === 'chromium'
-    ? { side_panel: { default_path: 'src/sidepanel/index.html' } }
+    ? { side_panel: { default_path: 'sidepanel/index.html' } }
     : {}),
   sidebar_action:
     mode === 'firefox'
       ? {
           default_title: 'Open WebUI',
-          default_panel: 'src/sidebar/index.html',
+          default_panel: 'sidebar/index.html',
           open_at_install: false
         }
       : undefined,
