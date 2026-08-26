@@ -12,26 +12,42 @@
   async function load() {
     settings = await browser.runtime.sendMessage({ type: 'settings:get' })
   }
+  function classify(urlValue: string): 'local' | 'remote' {
+    const parsed = new URL(
+      /^[a-z][a-z\d+.-]*:\/\//i.test(urlValue.trim())
+        ? urlValue.trim()
+        : `https://${urlValue.trim()}`
+    )
+    const hostname = parsed.hostname.toLowerCase()
+    const isLoopback =
+      hostname === 'localhost' || hostname === '::1' || /^127\./.test(hostname)
+    return isLoopback ? 'local' : 'remote'
+  }
+
   async function add() {
     error = ''
-    const result = await browser.runtime.sendMessage({
-      type: 'connections:add',
-      input: {
-        name,
-        url,
-        type:
-          url.includes('localhost') || url.includes('127.0.0.1')
-            ? 'local'
-            : 'remote'
-      }
-    })
-    if (result?.error) {
-      error = result.error
-      return
+    try {
+      const normalized = await browser.runtime.sendMessage({
+        type: 'connection:validate',
+        url
+      })
+      if (normalized?.error) throw new Error(normalized.error)
+      const result = await browser.runtime.sendMessage({
+        type: 'connections:add',
+        input: {
+          name: name.trim(),
+          url: normalized.url,
+          type: classify(normalized.url)
+        }
+      })
+      if (result?.error) throw new Error(result.error)
+      settings = await browser.runtime.sendMessage({ type: 'settings:get' })
+      name = ''
+      url = ''
+    } catch (cause) {
+      error =
+        cause instanceof Error ? cause.message : 'Unable to add connection.'
     }
-    settings = await browser.runtime.sendMessage({ type: 'settings:get' })
-    name = ''
-    url = ''
   }
   async function remove(connection: Connection) {
     await browser.runtime.sendMessage({

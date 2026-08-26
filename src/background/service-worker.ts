@@ -70,12 +70,9 @@ browser.runtime.onMessage.addListener(async (message: any) => {
         return result[0]?.result
       }
       case 'connection:validate': {
-        const url = normalizeConnectionUrl(message.url)
-        const response = await fetch(url, {
-          method: 'HEAD',
-          signal: AbortSignal.timeout(5000)
-        })
-        return { ok: response.ok, url }
+        // Syntax validation is intentionally local. A remote fetch would require
+        // broad host permissions before the user has approved a destination.
+        return { ok: true, url: normalizeConnectionUrl(message.url) }
       }
       default:
         return undefined

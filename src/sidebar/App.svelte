@@ -1,6 +1,8 @@
 <script lang="ts">
   import browser from 'webextension-polyfill'
-  import type { Settings, ContextItem } from '../shared/types'
+  import type { ContextItem, Settings } from '../shared/types'
+  import { loadPanelState, readPageContext, remove, stage } from '../ui/panel'
+
   let settings: Settings = {
     connections: [],
     defaultConnectionId: null,
@@ -8,68 +10,116 @@
   }
   let activeId = ''
   let context: ContextItem[] = []
+  let error = ''
+  let loading = true
+  let frameState: 'loading' | 'ready' | 'blocked' = 'loading'
+  let frameTimer: ReturnType<typeof setTimeout> | undefined
   $: active = settings.connections.find((item) => item.id === activeId)
+
   async function load() {
-    settings = await browser.runtime.sendMessage({ type: 'settings:get' })
-    activeId = settings.defaultConnectionId ?? settings.connections[0]?.id ?? ''
-    const stored = await browser.storage.session.get('stagedContext')
-    context = stored.stagedContext ? [stored.stagedContext as ContextItem] : []
+    try {
+      const state = await loadPanelState()
+      settings = state.settings
+      context = state.context
+      activeId =
+        settings.defaultConnectionId ?? settings.connections[0]?.id ?? ''
+    } catch (cause) {
+      error =
+        cause instanceof Error
+          ? cause.message
+          : 'Unable to load extension settings.'
+    } finally {
+      loading = false
+    }
   }
   async function addContext() {
-    const result = await browser.runtime.sendMessage({ type: 'page:read' })
-    const item: ContextItem = {
-      id: crypto.randomUUID(),
-      kind: 'page',
-      title: result.title || 'Current page',
-      sourceUrl: result.url,
-      text: result.text ?? '',
-      createdAt: Date.now(),
-      pinned: false,
-      truncated: false
+    error = ''
+    try {
+      context = await stage(await readPageContext())
+    } catch (cause) {
+      error =
+        cause instanceof Error ? cause.message : 'Unable to read this page.'
     }
-    context = [...context, item]
-    await browser.storage.session.set({ stagedContext: item })
+  }
+  async function removeContext(item: ContextItem) {
+    context = await remove(item)
   }
   function openSettings() {
     void browser.tabs.create({
       url: browser.runtime.getURL('src/settings/index.html')
     })
   }
+  function openInTab() {
+    if (active) void browser.tabs.create({ url: active.url })
+  }
+  function startFrameTimeout() {
+    frameState = 'loading'
+    if (frameTimer) clearTimeout(frameTimer)
+    frameTimer = setTimeout(() => {
+      if (frameState === 'loading') frameState = 'blocked'
+    }, 8000)
+  }
+  function reloadFrame() {
+    startFrameTimeout()
+    const current = activeId
+    activeId = ''
+    setTimeout(() => (activeId = current), 0)
+  }
+  $: if (active?.url) startFrameTimeout()
   load()
 </script>
 
 <div class="shell">
   <div class="toolbar">
-    <select bind:value={activeId} aria-label="Open WebUI connection"
-      ><option value="">Choose a connection</option
-      >{#each settings.connections as connection}<option value={connection.id}
+    <select bind:value={activeId} aria-label="Open Open WebUI connection">
+      <option value="">Choose a connection</option>
+      {#each settings.connections as connection}<option value={connection.id}
           >{connection.name}</option
-        >{/each}</select
-    ><button onclick={openSettings} title="Settings">⚙</button>
+        >{/each}
+    </select>
+    <button onclick={openSettings} title="Settings">⚙</button>
   </div>
-  {#if context.length}<div class="context">
-      <strong>Next message context</strong>{#each context as item}<div
-          class="context-item"
-        >
-          <span>{item.title}</span><button
-            onclick={() => {
-              context = context.filter((entry) => entry.id !== item.id)
-              void browser.storage.session.remove('stagedContext')
-            }}>Remove</button
+  {#if context.length}
+    <div class="context" aria-label="Staged context">
+      <strong>Next message context</strong>
+      {#each context as item}<div class="context-item">
+          <span title={item.sourceUrl}>{item.title}</span><button
+            onclick={() => removeContext(item)}>Remove</button
           >
         </div>{/each}
-    </div>{/if}
+    </div>
+  {/if}
   <div class="toolbar">
-    <button onclick={addContext}>Read this page</button>{#if active}<button
-        onclick={() => browser.tabs.create({ url: active.url })}
-        >Open in tab</button
-      >{/if}
+    <button onclick={addContext} disabled={loading}>Read this page</button>
+    {#if active}<button onclick={openInTab}>Open in tab</button>{/if}
   </div>
-  {#if active}<iframe title={active.name} src={active.url}></iframe>{:else}<div
-      class="empty"
-    >
+  {#if error}<p class="notice" role="alert">{error}</p>{/if}
+  {#if active}
+    {#if frameState === 'blocked'}
+      <div class="empty" role="status">
+        <h2>Open WebUI could not be embedded</h2>
+        <p>The server may block iframe embedding or be unreachable.</p>
+        <div class="actions">
+          <button onclick={openInTab}>Open in browser tab</button><button
+            onclick={reloadFrame}>Retry</button
+          >
+        </div>
+      </div>
+    {:else}
+      {#if frameState === 'loading'}<p class="loading" role="status">
+          Loading Open WebUI…
+        </p>{/if}
+      <iframe
+        title={active.name}
+        src={active.url}
+        onload={() => (frameState = 'ready')}
+      ></iframe>
+    {/if}
+  {:else}
+    <div class="empty">
       <h2>Connect Open WebUI</h2>
       <p>Add an existing Open WebUI server in Settings to get started.</p>
       <button onclick={openSettings}>Open Settings</button>
-    </div>{/if}
+    </div>
+  {/if}
 </div>
