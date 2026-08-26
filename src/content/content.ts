@@ -17,10 +17,19 @@ if (typeof window !== 'undefined' && window.top === window) {
     }
     const type = messageByName[name]
     if (!type) throw new Error('Unsupported integration request.')
-    const response = (await browser.runtime.sendMessage({
-      type,
-      ...(args && typeof args === 'object' ? args : {})
-    })) as { error?: string }
+    const message: Record<string, unknown> = { type }
+    if (name === 'context:stage') {
+      if (!args || typeof args !== 'object' || Array.isArray(args))
+        throw new Error('A context item is required.')
+      message.item = (args as Record<string, unknown>).item
+    } else if (name === 'context:remove') {
+      if (!args || typeof args !== 'object' || Array.isArray(args))
+        throw new Error('A context ID is required.')
+      message.id = (args as Record<string, unknown>).id
+    }
+    const response = (await browser.runtime.sendMessage(message)) as {
+      error?: string
+    }
     if (response.error) throw new Error(response.error)
     return response
   }

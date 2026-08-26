@@ -84,6 +84,7 @@ export function createOpenWebUIBridge(
 
     if (event.data.type === 'hello') {
       void reportPromise.then((report) => {
+        if (!started) return
         if (!negotiator) {
           negotiator = new CapabilityNegotiator({
             nonce,
@@ -99,6 +100,10 @@ export function createOpenWebUIBridge(
 
     if (seenRequestIds.has(event.data.id)) return
     seenRequestIds.add(event.data.id)
+    if (seenRequestIds.size > 1_024) {
+      const oldest = seenRequestIds.values().next().value
+      if (oldest) seenRequestIds.delete(oldest)
+    }
     const payload = event.data.payload as RequestPayload | undefined
     if (
       !payload ||

@@ -3,6 +3,7 @@ import {
   assertContextText,
   normalizeConnectionUrl
 } from '../../src/shared/validation'
+import { isContextItem } from '../../src/shared/message-validation'
 
 describe('connection validation', () => {
   it('normalizes a host and removes hash and trailing slash', () => {
@@ -26,5 +27,33 @@ describe('context limits', () => {
       text: 'abc',
       truncated: true
     })
+  })
+})
+
+describe('context message validation', () => {
+  const base = {
+    id: 'context-1',
+    kind: 'page',
+    title: 'Page',
+    createdAt: 1,
+    pinned: false,
+    truncated: false,
+    text: 'safe'
+  }
+
+  it('accepts HTTP sources and rejects executable data URLs', () => {
+    expect(isContextItem({ ...base, sourceUrl: 'https://example.test' })).toBe(
+      true
+    )
+    expect(isContextItem({ ...base, sourceUrl: 'javascript:alert(1)' })).toBe(
+      false
+    )
+    expect(
+      isContextItem({
+        ...base,
+        text: undefined,
+        dataUrl: 'data:text/html;base64,PHNjcmlwdD4='
+      })
+    ).toBe(false)
   })
 })

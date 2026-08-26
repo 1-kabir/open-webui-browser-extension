@@ -15,6 +15,19 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      !url.username &&
+      !url.password
+    )
+  } catch {
+    return false
+  }
+}
+
 export function isContextItem(value: unknown): value is ContextItem {
   if (!record(value)) return false
   if (
@@ -41,7 +54,15 @@ export function isContextItem(value: unknown): value is ContextItem {
   if (
     value.dataUrl !== undefined &&
     (typeof value.dataUrl !== 'string' ||
-      value.dataUrl.length > LIMITS.screenshotBytes * 2)
+      value.dataUrl.length > LIMITS.screenshotBytes * 2 ||
+      !/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/]+=*$/i.test(
+        value.dataUrl
+      ))
+  )
+    return false
+  if (
+    value.sourceUrl !== undefined &&
+    (value.sourceUrl.length > 2_048 || !isHttpUrl(value.sourceUrl))
   )
     return false
   return value.text !== undefined || value.dataUrl !== undefined
