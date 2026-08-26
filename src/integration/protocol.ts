@@ -7,12 +7,7 @@ export const MAX_ID_LENGTH = 128
 export const MAX_NONCE_LENGTH = 128
 
 export type BridgeMessageType =
-  | 'hello'
-  | 'hello:ack'
-  | 'capabilities'
-  | 'request'
-  | 'response'
-  | 'event'
+  'hello' | 'hello:ack' | 'capabilities' | 'request' | 'response' | 'event'
 
 export interface BridgeMessage<T = unknown> {
   readonly protocol: typeof BRIDGE_PROTOCOL
@@ -44,7 +39,8 @@ export interface ResponsePayload {
 }
 
 export interface EventPayload {
-  readonly name: 'capabilities' | 'context' | 'theme' | 'navigation' | 'connection'
+  readonly name:
+    'capabilities' | 'context' | 'theme' | 'navigation' | 'connection'
   readonly data: unknown
 }
 
@@ -62,17 +58,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isSafeString(value: unknown, maxLength: number): value is string {
-  return typeof value === 'string' && value.length > 0 && value.length <= maxLength
+  return (
+    typeof value === 'string' && value.length > 0 && value.length <= maxLength
+  )
 }
 
 export function createBridgeMessage<T>(
   type: BridgeMessageType,
   nonce: string,
   payload?: T,
-  id = crypto.randomUUID()
+  id: string = crypto.randomUUID()
 ): BridgeMessage<T> {
-  if (!isSafeString(nonce, MAX_NONCE_LENGTH)) throw new Error('Invalid bridge nonce.')
-  if (!isSafeString(id, MAX_ID_LENGTH)) throw new Error('Invalid bridge message ID.')
+  if (!isSafeString(nonce, MAX_NONCE_LENGTH))
+    throw new Error('Invalid bridge nonce.')
+  if (!isSafeString(id, MAX_ID_LENGTH))
+    throw new Error('Invalid bridge message ID.')
   const message: BridgeMessage<T> = {
     protocol: BRIDGE_PROTOCOL,
     version: BRIDGE_VERSION,
@@ -97,6 +97,8 @@ export function isBridgeMessage(value: unknown): value is BridgeMessage {
   )
     return false
 
+  if (!isValidPayload(value.type as BridgeMessageType, value.payload))
+    return false
   try {
     return JSON.stringify(value).length <= MAX_MESSAGE_BYTES
   } catch {
@@ -104,8 +106,52 @@ export function isBridgeMessage(value: unknown): value is BridgeMessage {
   }
 }
 
-export function isAllowedBridgeOrigin(origin: string, expectedOrigin: string): boolean {
-  if (!origin || origin === 'null' || !expectedOrigin || expectedOrigin === 'null') return false
+function isValidPayload(type: BridgeMessageType, payload: unknown): boolean {
+  if (payload === undefined)
+    return (
+      type === 'hello:ack' || type === 'capabilities' || type === 'response'
+    )
+  if (!isRecord(payload)) return false
+
+  if (type === 'hello') {
+    return (
+      payload.client === 'open-webui' &&
+      (payload.connectionId === undefined ||
+        isSafeString(payload.connectionId, MAX_ID_LENGTH))
+    )
+  }
+  if (type === 'capabilities') return isRecord(payload.capabilities)
+  if (type === 'request') return isSafeString(payload.name, MAX_ID_LENGTH)
+  if (type === 'event') {
+    return (
+      ['capabilities', 'context', 'theme', 'navigation', 'connection'].includes(
+        String(payload.name)
+      ) && 'data' in payload
+    )
+  }
+  if (type === 'response') {
+    return (
+      typeof payload.ok === 'boolean' &&
+      (payload.error === undefined ||
+        (isRecord(payload.error) &&
+          isSafeString(payload.error.code, MAX_ID_LENGTH) &&
+          isSafeString(payload.error.message, MAX_MESSAGE_BYTES)))
+    )
+  }
+  return type === 'hello:ack'
+}
+
+export function isAllowedBridgeOrigin(
+  origin: string,
+  expectedOrigin: string
+): boolean {
+  if (
+    !origin ||
+    origin === 'null' ||
+    !expectedOrigin ||
+    expectedOrigin === 'null'
+  )
+    return false
   try {
     return new URL(origin).origin === new URL(expectedOrigin).origin
   } catch {
