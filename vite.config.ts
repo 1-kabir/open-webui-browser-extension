@@ -11,11 +11,14 @@ const manifest = (mode: string) => ({
   permissions: [
     'storage',
     'tabs',
-    'activeTab',
-    'scripting',
     ...(mode === 'chromium' ? ['sidePanel'] : [])
   ],
-  optional_permissions: ['clipboardRead', 'tabCapture'],
+  optional_permissions: [
+    'activeTab',
+    'scripting',
+    'clipboardRead',
+    'tabCapture'
+  ],
   host_permissions: [],
   action: { default_title: 'Open WebUI' },
   background:
@@ -69,6 +72,7 @@ export default defineConfig(({ mode }) => ({
         content: resolve('src/content/content.ts'),
         sidepanel: resolve('src/sidepanel/index.html'),
         sidebar: resolve('src/sidebar/index.html'),
+        fallback: resolve('src/fallback-tab/index.html'),
         settings: resolve('src/settings/index.html')
       },
       output: {
