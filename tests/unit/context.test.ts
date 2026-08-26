@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   clearContext,
+  clearUnpinnedContext,
   listContext,
   pinContext,
   removeContext,
@@ -44,5 +45,22 @@ describe('context manager', () => {
     setContext([item('two', 'two'), item('two', 'two')])
     expect(listContext()).toHaveLength(1)
     expect(listContext()[0].id).toBe('two')
+  })
+
+  it('retains pinned items when the staging limit is reached', () => {
+    stageContext(item('pinned', 'pinned'))
+    pinContext('pinned')
+    for (let i = 0; i < 20; i++) stageContext(item(`new-${i}`, String(i)))
+    const result = listContext()
+    expect(result).toHaveLength(20)
+    expect(result.some((entry) => entry.id === 'pinned')).toBe(true)
+    expect(result.some((entry) => entry.id === 'new-19')).toBe(true)
+  })
+
+  it('clears only unpinned items', () => {
+    stageContext(item('pinned', 'keep'))
+    pinContext('pinned')
+    stageContext(item('temporary', 'remove'))
+    expect(clearUnpinnedContext().map((entry) => entry.id)).toEqual(['pinned'])
   })
 })

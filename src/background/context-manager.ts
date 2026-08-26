@@ -13,7 +13,16 @@ export function stageContext(item: ContextItem): ContextItem[] {
       existing.text === item.text &&
       existing.dataUrl === item.dataUrl
   )
-  if (!duplicate) staged = [...staged, item].slice(-MAX_ITEMS)
+  if (!duplicate) {
+    const next = [...staged, item]
+    while (next.length > MAX_ITEMS) {
+      const evictIndex = next.findIndex((entry) => !entry.pinned)
+      // If every item is pinned, the limit still wins; evict the oldest pinned
+      // item rather than allowing unbounded memory growth from restored state.
+      next.splice(evictIndex < 0 ? 0 : evictIndex, 1)
+    }
+    staged = next
+  }
   return listContext()
 }
 export function removeContext(id: string): ContextItem[] {

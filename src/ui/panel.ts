@@ -1,16 +1,22 @@
 import browser from 'webextension-polyfill'
 import type { Connection, ContextItem, Settings } from '../shared/types'
 
+export async function request<T>(message: Record<string, unknown>): Promise<T> {
+  const result = (await browser.runtime.sendMessage(message)) as
+    T | { error?: string }
+  if (result && typeof result === 'object' && 'error' in result && result.error)
+    throw new Error(result.error)
+  return result as T
+}
+
 export async function loadPanelState(): Promise<{
   settings: Settings
   context: ContextItem[]
 }> {
-  const settings = (await browser.runtime.sendMessage({
-    type: 'settings:get'
-  })) as Settings
-  const context = (await browser.runtime.sendMessage({
-    type: 'context:list'
-  })) as ContextItem[]
+  const [settings, context] = await Promise.all([
+    request<Settings>({ type: 'settings:get' }),
+    request<ContextItem[]>({ type: 'context:list' })
+  ])
   return { settings, context }
 }
 
@@ -27,11 +33,8 @@ type PageResult = {
 export async function readPageContext(
   mode: 'page' | 'selection' | 'html' = 'page'
 ): Promise<ContextItem> {
-  const result = (await browser.runtime.sendMessage({
-    type: 'page:read',
-    mode
-  })) as PageResult
-  if (!result || typeof result !== 'object' || !result.url)
+  const result = await request<PageResult>({ type: 'page:read', mode })
+  if (!result || !result.url)
     throw new Error(
       'This page cannot be read. Try selecting text and copying it instead.'
     )
@@ -66,9 +69,9 @@ export async function readPageContext(
 }
 
 export async function readClipboardContext(): Promise<ContextItem> {
-  const result = (await browser.runtime.sendMessage({
+  const result = await request<{ text?: string; truncated?: boolean }>({
     type: 'clipboard:read'
-  })) as { text?: string; truncated?: boolean }
+  })
   if (!result?.text) throw new Error('The clipboard is empty.')
   return {
     id: crypto.randomUUID(),
@@ -82,14 +85,9 @@ export async function readClipboardContext(): Promise<ContextItem> {
 }
 
 export async function readTabsContext(): Promise<ContextItem> {
-  const tabs = (await browser.runtime.sendMessage({
-    type: 'tabs:read'
-  })) as Array<{
-    title: string
-    url: string
-    active: boolean
-    pinned: boolean
-  }>
+  const tabs = await request<
+    Array<{ title: string; url: string; active: boolean; pinned: boolean }>
+  >({ type: 'tabs:read' })
   if (!tabs.length) throw new Error('No browser tabs are available.')
   return {
     id: crypto.randomUUID(),
@@ -107,10 +105,35 @@ export async function readTabsContext(): Promise<ContextItem> {
   }
 }
 
+export async function readTabGroupsContext(): Promise<ContextItem> {
+  const groups = await request<
+    Array<{
+      title: string
+      tabIds: number[]
+      native: boolean
+      windowId?: number
+    }>
+  >({ type: 'tab-groups:read' })
+  if (!groups.length) throw new Error('No tab groups are available.')
+  return {
+    id: crypto.randomUUID(),
+    kind: 'tab-groups',
+    title: `${groups.length} tab group${groups.length === 1 ? '' : 's'}`,
+    text: groups
+      .map(
+        (group) =>
+          `${group.title || 'Untitled group'} (${group.native ? 'native' : 'window fallback'}${group.windowId == null ? '' : `, window ${group.windowId}`})\nTab IDs: ${group.tabIds.join(', ') || 'none'}`
+      )
+      .join('\n\n'),
+    createdAt: Date.now(),
+    pinned: false,
+    truncated: false
+  }
+}
+
 export async function readScreenshotContext(): Promise<ContextItem> {
-  const dataUrl = (await browser.runtime.sendMessage({
-    type: 'capture:visible'
-  })) as string
+  const dataUrl = await request<string>({ type: 'capture:visible' })
+  if (!dataUrl) throw new Error('The visible tab could not be captured.')
   return {
     id: crypto.randomUUID(),
     kind: 'screenshot',
@@ -122,35 +145,23 @@ export async function readScreenshotContext(): Promise<ContextItem> {
   }
 }
 
-export async function stage(item: ContextItem): Promise<ContextItem[]> {
-  return browser.runtime.sendMessage({ type: 'context:stage', item })
+export function stage(item: ContextItem) {
+  return request<ContextItem[]>({ type: 'context:stage', item })
 }
-
-export async function remove(item: ContextItem): Promise<ContextItem[]> {
-  return browser.runtime.sendMessage({ type: 'context:remove', id: item.id })
+export function remove(item: ContextItem) {
+  return request<ContextItem[]>({ type: 'context:remove', id: item.id })
 }
-
-export async function pin(
-  item: ContextItem,
-  pinned: boolean
-): Promise<ContextItem[]> {
-  return browser.runtime.sendMessage({
-    type: 'context:pin',
-    id: item.id,
-    pinned
-  })
+export function pin(item: ContextItem, pinned: boolean) {
+  return request<ContextItem[]>({ type: 'context:pin', id: item.id, pinned })
 }
-
-export async function clearUnpinned(): Promise<ContextItem[]> {
-  return browser.runtime.sendMessage({ type: 'context:clear-unpinned' })
+export function clearUnpinned() {
+  return request<ContextItem[]>({ type: 'context:clear-unpinned' })
 }
-
-export async function clearAll(): Promise<ContextItem[]> {
-  return browser.runtime.sendMessage({ type: 'context:clear' })
+export function clearAll() {
+  return request<ContextItem[]>({ type: 'context:clear' })
 }
-
-export async function setDefault(connection: Connection): Promise<Settings> {
-  return browser.runtime.sendMessage({
+export function setDefault(connection: Connection) {
+  return request<Settings>({
     type: 'connections:set-default',
     id: connection.id
   })
