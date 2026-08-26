@@ -5,6 +5,7 @@
   import {
     clearAll,
     clearUnpinned,
+    exportContext,
     loadPanelState,
     pin,
     readClipboardContext,
@@ -26,6 +27,7 @@
   let error = ''
   let loading = true
   let busy = false
+  let exporting = false
   let frameState: 'loading' | 'ready' | 'blocked' = 'loading'
   let frameTimer: ReturnType<typeof setTimeout> | undefined
   $: active = settings.connections.find((item) => item.id === activeId)
@@ -74,6 +76,18 @@
 
   async function removeContext(item: ContextItem) {
     context = await remove(item)
+  }
+  async function copyContext() {
+    error = ''
+    exporting = true
+    try {
+      await exportContext(context)
+      context = await clearUnpinned()
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'Unable to copy context.'
+    } finally {
+      exporting = false
+    }
   }
   async function togglePin(item: ContextItem) {
     context = await pin(item, !item.pinned)
@@ -129,6 +143,8 @@
     onRemove={removeContext}
     onPin={togglePin}
     onClear={clear}
+    onExport={copyContext}
+    {exporting}
   />
   {#if error}<p class="notice" role="alert">{error}</p>{/if}
 

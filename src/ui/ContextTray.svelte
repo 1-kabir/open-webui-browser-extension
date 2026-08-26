@@ -7,6 +7,8 @@
   export let onRemove: (item: ContextItem) => void
   export let onPin: (item: ContextItem) => void
   export let onClear: (pinnedOnly: boolean) => void
+  export let onExport: () => void
+  export let exporting = false
 
   const actions: Array<{ id: ContextAction; label: string; hint: string }> = [
     { id: 'page', label: 'Page', hint: 'Read the current page' },
@@ -102,6 +104,9 @@
       {/each}
     </div>
     <div class="tray-footer">
+      <button type="button" onclick={onExport} disabled={busy || exporting}
+        >{exporting ? 'Copying…' : 'Copy context'}</button
+      >
       <button type="button" onclick={() => onClear(true)} disabled={busy}
         >Clear unpinned</button
       >

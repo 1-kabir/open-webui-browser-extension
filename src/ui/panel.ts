@@ -145,6 +145,26 @@ export async function readScreenshotContext(): Promise<ContextItem> {
   }
 }
 
+export function formatContext(items: ContextItem[]): string {
+  return items
+    .map((item) => {
+      const source = item.sourceUrl ? `\nSource: ${item.sourceUrl}` : ''
+      const body = item.dataUrl
+        ? `[${item.title}]\nA screenshot is staged locally and is not included in this text export.`
+        : (item.text ?? '')
+      return `## ${item.title} (${item.kind})${source}\n\n${body}`
+    })
+    .join('\n\n---\n\n')
+}
+
+export async function exportContext(items: ContextItem[]): Promise<void> {
+  if (!items.length) throw new Error('There is no staged context to export.')
+  const text = formatContext(items)
+  if (!navigator.clipboard?.writeText)
+    throw new Error('Copying is not available in this browser.')
+  await navigator.clipboard.writeText(text)
+}
+
 export function stage(item: ContextItem) {
   return request<ContextItem[]>({ type: 'context:stage', item })
 }
