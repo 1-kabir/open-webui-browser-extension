@@ -8,12 +8,8 @@ const manifest = (mode: string) => ({
   name: 'Open WebUI Browser Extension',
   version: '0.1.0',
   description: 'Connect to Open WebUI and add browser context to your chats.',
-  permissions: [
-    'storage',
-    'tabs',
-    ...(mode === 'chromium' ? ['sidePanel'] : [])
-  ],
-  optional_permissions: ['activeTab', 'scripting', 'clipboardRead'],
+  permissions: ['storage', ...(mode === 'chromium' ? ['sidePanel'] : [])],
+  optional_permissions: ['tabs', 'activeTab', 'scripting', 'clipboardRead'],
   optional_host_permissions: ['http://*/*', 'https://*/*'],
   content_scripts: [
     {

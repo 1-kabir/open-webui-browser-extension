@@ -3,7 +3,9 @@ import {
   addConnection,
   getSettings,
   removeConnection,
-  setDefaultConnection
+  setDefaultConnection,
+  updateConnection,
+  updateSettings
 } from './connection-manager'
 import { normalizeConnectionUrl } from '../shared/validation'
 import { readTabGroups } from '../browser/tab-groups'
@@ -11,7 +13,11 @@ import { readTabs } from '../browser/tabs'
 import { readClipboardText } from '../browser/clipboard'
 import { captureVisibleTab } from '../browser/capture'
 import { LIMITS } from '../shared/limits'
-import { hasPermission, requestPermission } from './permission-manager'
+import {
+  getPermissionState,
+  removePermission,
+  requestPermission
+} from './permission-manager'
 import { isContextItem, isId, isTabIds } from '../shared/message-validation'
 import {
   clearContext,
@@ -35,7 +41,12 @@ browser.runtime.onMessage.addListener(
         'navigation:get'
       ])
       if (bridgeTypes.has(message?.type)) {
+        // Only a top-level content script can act as the page bridge. Extension
+        // pages (panels/settings) must use their own privileged message paths;
+        // otherwise an arbitrary extension page could be mistaken for WebUI.
         const senderUrl = sender.tab?.url
+        if (!sender.tab || sender.frameId !== 0 || !senderUrl)
+          throw new Error('Bridge requests require a WebUI page sender.')
         const configured = (await getSettings()).connections.some(
           (connection) => {
             try {
@@ -57,9 +68,12 @@ browser.runtime.onMessage.addListener(
         case 'settings:get':
           return getSettings()
         case 'connections:add':
-          if (!message.input || typeof message.input !== 'object')
-            throw new Error('Invalid connection details.')
           return addConnection(message.input)
+        case 'settings:update':
+          return updateSettings(message.patch)
+        case 'connections:update':
+          if (!isId(message.id)) throw new Error('Invalid connection ID.')
+          return updateConnection(message.id, message.input)
         case 'connections:remove':
           if (!isId(message.id)) throw new Error('Invalid connection ID.')
           return removeConnection(message.id)
@@ -70,8 +84,12 @@ browser.runtime.onMessage.addListener(
           return capabilities()
         case 'tabs:read':
           if (!isTabIds(message.ids)) throw new Error('Invalid tab selection.')
+          if (!(await requestPermission('tabs')))
+            throw new Error('Tab permission was not granted.')
           return readTabs(message.ids)
         case 'tab-groups:read':
+          if (!(await requestPermission('tabs')))
+            throw new Error('Tab permission was not granted.')
           return readTabGroups()
         case 'clipboard:read':
           if (!(await requestPermission('clipboardRead')))
@@ -171,11 +189,19 @@ browser.runtime.onMessage.addListener(
             : { title: tab.title ?? '', url: tab.url ?? '' }
         }
         case 'permissions:get':
-          return {
-            activeTab: await hasPermission('activeTab'),
-            scripting: await hasPermission('scripting'),
-            clipboardRead: await hasPermission('clipboardRead')
-          }
+          return getPermissionState()
+        case 'permissions:remove':
+          if (
+            message.permission !== 'tabs' &&
+            message.permission !== 'activeTab' &&
+            message.permission !== 'scripting' &&
+            message.permission !== 'clipboardRead'
+          )
+            throw new Error('Invalid permission.')
+          return getPermissionState().then(async (state) => {
+            await removePermission(message.permission)
+            return { ...state, [message.permission]: false }
+          })
         case 'connection:validate': {
           // Syntax validation is intentionally local. A remote fetch would require
           // broad host permissions before the user has approved a destination.
@@ -193,16 +219,26 @@ browser.runtime.onMessage.addListener(
 )
 browser.action.onClicked.addListener(async () => {
   const api = browser as any
-  if (api.sidePanel?.open) {
-    const [tab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true
+  try {
+    if (api.sidePanel?.open) {
+      const [tab] = await browser.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+      if (tab?.windowId != null)
+        await api.sidePanel.open({ windowId: tab.windowId })
+      return
+    }
+    if (api.sidebarAction?.open) {
+      await api.sidebarAction.open()
+      return
+    }
+    await browser.tabs.create({
+      url: browser.runtime.getURL('src/fallback-tab/index.html')
     })
-    if (tab?.windowId != null)
-      await api.sidePanel.open({ windowId: tab.windowId })
-    return
+  } catch {
+    await browser.tabs.create({
+      url: browser.runtime.getURL('src/fallback-tab/index.html')
+    })
   }
-  await browser.tabs.create({
-    url: browser.runtime.getURL('src/fallback-tab/index.html')
-  })
 })

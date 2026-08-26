@@ -1,83 +1,110 @@
 <script lang="ts">
   import browser from 'webextension-polyfill'
-  import type { Connection, Settings } from '../shared/types'
+  import type { CapabilityReport, Connection, Settings } from '../shared/types'
+  import type { PermissionState } from '../background/permission-manager'
+
   let settings: Settings = {
     connections: [],
     defaultConnectionId: null,
     theme: 'system'
   }
+  let permissions: PermissionState = {
+    tabs: false,
+    activeTab: false,
+    scripting: false,
+    clipboardRead: false
+  }
+  let capabilities: CapabilityReport | undefined
   let name = ''
   let url = ''
   let error = ''
-  async function load() {
-    settings = await browser.runtime.sendMessage({ type: 'settings:get' })
-  }
-  function classify(urlValue: string): 'local' | 'remote' {
-    const parsed = new URL(
-      /^[a-z][a-z\d+.-]*:\/\//i.test(urlValue.trim())
-        ? urlValue.trim()
-        : `https://${urlValue.trim()}`
-    )
-    const hostname = parsed.hostname.toLowerCase()
-    const isLoopback =
-      hostname === 'localhost' || hostname === '::1' || /^127\./.test(hostname)
-    return isLoopback ? 'local' : 'remote'
-  }
+  let status = ''
 
+  async function send<T>(message: unknown): Promise<T> {
+    const result = (await browser.runtime.sendMessage(message)) as T & {
+      error?: string
+    }
+    if (
+      result &&
+      typeof result === 'object' &&
+      'error' in result &&
+      result.error
+    )
+      throw new Error(result.error)
+    return result
+  }
+  async function load() {
+    try {
+      ;[settings, permissions, capabilities] = await Promise.all([
+        send<Settings>({ type: 'settings:get' }),
+        send<PermissionState>({ type: 'permissions:get' }),
+        send<CapabilityReport>({ type: 'capabilities:get' })
+      ])
+    } catch (cause) {
+      error =
+        cause instanceof Error ? cause.message : 'Unable to load settings.'
+    }
+  }
   async function add() {
     error = ''
     try {
-      const normalized = await browser.runtime.sendMessage({
+      const input = await send<{ url: string }>({
         type: 'connection:validate',
         url
       })
-      if (normalized?.error) throw new Error(normalized.error)
-      const result = await browser.runtime.sendMessage({
-        type: 'connections:add',
-        input: {
-          name: name.trim(),
-          url: normalized.url,
-          type: classify(normalized.url)
-        }
-      })
-      if (result?.error) throw new Error(result.error)
-      settings = await browser.runtime.sendMessage({ type: 'settings:get' })
+      await send({ type: 'connections:add', input: { name, url: input.url } })
+      settings = await send<Settings>({ type: 'settings:get' })
       name = ''
       url = ''
+      status = 'Connection saved.'
     } catch (cause) {
       error =
         cause instanceof Error ? cause.message : 'Unable to add connection.'
     }
   }
   async function remove(connection: Connection) {
-    error = ''
     try {
-      const result = await browser.runtime.sendMessage({
+      settings = await send<Settings>({
         type: 'connections:remove',
         id: connection.id
       })
-      if (result?.error) throw new Error(result.error)
-      settings = await browser.runtime.sendMessage({ type: 'settings:get' })
     } catch (cause) {
       error =
         cause instanceof Error ? cause.message : 'Unable to remove connection.'
     }
   }
-
   async function makeDefault(connection: Connection) {
-    error = ''
     try {
-      const result = await browser.runtime.sendMessage({
+      settings = await send<Settings>({
         type: 'connections:set-default',
         id: connection.id
       })
-      if (result?.error) throw new Error(result.error)
-      settings = result as Settings
     } catch (cause) {
       error =
         cause instanceof Error
           ? cause.message
           : 'Unable to select default connection.'
+    }
+  }
+  async function updateTheme() {
+    try {
+      settings = await send<Settings>({
+        type: 'settings:update',
+        patch: { theme: settings.theme }
+      })
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'Unable to save theme.'
+    }
+  }
+  async function revoke(permission: keyof PermissionState) {
+    try {
+      permissions = await send<PermissionState>({
+        type: 'permissions:remove',
+        permission
+      })
+    } catch (cause) {
+      error =
+        cause instanceof Error ? cause.message : 'Unable to revoke permission.'
     }
   }
   load()
@@ -86,47 +113,93 @@
 <div class="settings">
   <h1>Open WebUI Settings</h1>
   <p>
-    Connections stay in this browser. The extension does not install or run a
-    local server.
+    Connections and preferences stay in this browser. The extension never stores
+    passwords or tokens.
   </p>
   <form
     onsubmit={(event) => {
       event.preventDefault()
-      add()
+      void add()
     }}
   >
     <label
       >Name<input
         bind:value={name}
         required
+        maxlength="100"
         placeholder="My Open WebUI"
       /></label
-    ><label
+    >
+    <label
       >Server URL<input
         bind:value={url}
         required
+        maxlength="2048"
         placeholder="https://chat.example.com or http://localhost:8080"
       /></label
-    ><button type="submit">Add connection</button>
-  </form>
-  {#if error}<p role="alert">{error}</p>{/if}
-  <h2>Connections</h2>
-  {#if !settings.connections.length}<p>
-      No connections configured.
-    </p>{/if}{#each settings.connections as connection}<div
-      class="context-item"
     >
-      <span>
-        {connection.name}<br /><small>{connection.url}</small>
-        {#if settings.defaultConnectionId === connection.id}<br /><small
+    <button type="submit">Add connection</button>
+  </form>
+  {#if error}<p class="notice" role="alert">{error}</p>{/if}
+  {#if status}<p role="status">{status}</p>{/if}
+
+  <h2>Connections</h2>
+  {#if !settings.connections.length}<p>No connections configured.</p>{/if}
+  {#each settings.connections as connection}
+    <div class="context-item">
+      <span
+        >{connection.name}<br /><small>{connection.url}</small
+        >{#if settings.defaultConnectionId === connection.id}<br /><small
             >Default connection</small
-          >{/if}
-      </span>
+          >{/if}</span
+      >
       <span class="actions">
         {#if settings.defaultConnectionId !== connection.id}<button
-            onclick={() => makeDefault(connection)}>Use by default</button
+            onclick={() => void makeDefault(connection)}>Use by default</button
           >{/if}
-        <button onclick={() => remove(connection)}>Remove</button>
+        <button onclick={() => void remove(connection)}>Remove</button>
       </span>
-    </div>{/each}
+    </div>
+  {/each}
+
+  <h2>Appearance</h2>
+  <label
+    >Theme<select
+      bind:value={settings.theme}
+      onchange={() => void updateTheme()}
+      ><option value="system">System</option><option value="light">Light</option
+      ><option value="dark">Dark</option></select
+    ></label
+  >
+
+  <h2>Permissions</h2>
+  <p>
+    Optional access is requested only when its feature is used. Revoking access
+    disables that feature until requested again.
+  </p>
+  {#each Object.entries(permissions) as [permission, granted]}
+    <div class="context-item">
+      <span>{permission}: {granted ? 'granted' : 'not granted'}</span
+      >{#if granted}<button
+          onclick={() => void revoke(permission as keyof PermissionState)}
+          >Revoke</button
+        >{/if}
+    </div>
+  {/each}
+
+  <h2>Diagnostics</h2>
+  {#if capabilities}<dl>
+      <dt>Browser</dt>
+      <dd>{capabilities.browser}</dd>
+      <dt>Native panel</dt>
+      <dd>
+        {capabilities.sidePanel || capabilities.sidebar
+          ? 'available'
+          : 'fallback tab'}
+      </dd>
+      <dt>Tab groups</dt>
+      <dd>{capabilities.tabGroups ? 'available' : 'fallback metadata'}</dd>
+      <dt>Capture</dt>
+      <dd>{capabilities.capture ? 'available' : 'unavailable'}</dd>
+    </dl>{/if}
 </div>
