@@ -16,27 +16,24 @@
     context = stored.stagedContext ? [stored.stagedContext as ContextItem] : []
   }
   async function addContext() {
-    const [tab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true
-    })
-    if (!tab.id) return
-    const result = await browser.tabs.sendMessage(tab.id, { type: 'page:read' })
+    const result = await browser.runtime.sendMessage({ type: 'page:read' })
     const item: ContextItem = {
       id: crypto.randomUUID(),
       kind: 'page',
       title: result.title || 'Current page',
       sourceUrl: result.url,
-      text: result.text.text,
+      text: result.text ?? '',
       createdAt: Date.now(),
       pinned: false,
-      truncated: result.text.truncated
+      truncated: false
     }
     context = [...context, item]
     await browser.storage.session.set({ stagedContext: item })
   }
   function openSettings() {
-    void browser.tabs.create({ url: browser.runtime.getURL('settings.html') })
+    void browser.tabs.create({
+      url: browser.runtime.getURL('src/settings/index.html')
+    })
   }
   load()
 </script>

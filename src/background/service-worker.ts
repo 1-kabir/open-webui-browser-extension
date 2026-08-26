@@ -6,6 +6,16 @@ import {
   setDefaultConnection
 } from './connection-manager'
 import { normalizeConnectionUrl } from '../shared/validation'
+import { readTabGroups } from '../browser/tab-groups'
+import { readTabs } from '../browser/tabs'
+import { readClipboardText } from '../browser/clipboard'
+import { captureVisibleTab } from '../browser/capture'
+import {
+  clearContext,
+  listContext,
+  removeContext,
+  stageContext
+} from './context-manager'
 browser.runtime.onInstalled.addListener(() => {
   void getSettings()
 })
@@ -22,6 +32,43 @@ browser.runtime.onMessage.addListener(async (message: any) => {
         return setDefaultConnection(message.id)
       case 'capabilities:get':
         return capabilities()
+      case 'tabs:read':
+        return readTabs(message.ids)
+      case 'tab-groups:read':
+        return readTabGroups()
+      case 'clipboard:read':
+        return readClipboardText()
+      case 'capture:visible':
+        return captureVisibleTab(message.windowId)
+      case 'context:list':
+        return listContext()
+      case 'context:stage':
+        return stageContext(message.item)
+      case 'context:remove':
+        return removeContext(message.id)
+      case 'context:clear':
+        return clearContext()
+      case 'page:read': {
+        const [tab] = await browser.tabs.query({
+          active: true,
+          currentWindow: true
+        })
+        if (tab.id == null) throw new Error('No active page is available.')
+        const result = await browser.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => ({
+            title: document.title,
+            url: location.href,
+            selection: (window.getSelection()?.toString() ?? '').slice(
+              0,
+              100000
+            ),
+            text: (document.body?.innerText ?? '').slice(0, 100000),
+            html: (document.documentElement?.outerHTML ?? '').slice(0, 150000)
+          })
+        })
+        return result[0]?.result
+      }
       case 'connection:validate': {
         const url = normalizeConnectionUrl(message.url)
         const response = await fetch(url, {
@@ -48,5 +95,7 @@ browser.action.onClicked.addListener(async () => {
       await api.sidePanel.open({ windowId: tab.windowId })
     return
   }
-  await browser.tabs.create({ url: browser.runtime.getURL('sidepanel.html') })
+  await browser.tabs.create({
+    url: browser.runtime.getURL('src/sidepanel/index.html')
+  })
 })

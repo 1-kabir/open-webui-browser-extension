@@ -1,3 +1,4 @@
+import { mount } from 'svelte'
 import Settings from './Settings.svelte'
 import '../ui.css'
-new Settings({ target: document.getElementById('app')! })
+mount(Settings, { target: document.getElementById('app')! })
