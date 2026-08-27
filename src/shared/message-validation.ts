@@ -34,7 +34,8 @@ export const extensionMessageTypes = [
   'navigation:get',
   'permissions:get',
   'permissions:remove',
-  'connection:validate'
+  'connection:validate',
+  'connection:test'
 ] as const
 
 export function isExtensionMessage(

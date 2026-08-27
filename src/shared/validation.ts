@@ -1,5 +1,11 @@
 import type { Connection, ConnectionType, Settings } from './types'
 
+export interface ConnectionInput {
+  name: string
+  url: string
+  type?: ConnectionType
+}
+
 const connectionNameLimit = 100
 const connectionTypes = new Set<ConnectionType>(['local', 'remote'])
 

@@ -100,6 +100,24 @@
       url: browser.runtime.getURL('src/settings/index.html')
     })
   }
+  async function testActiveConnection() {
+    if (!active) return
+    error = ''
+    try {
+      const result = (await browser.runtime.sendMessage({
+        type: 'connection:test',
+        url: active.url
+      })) as { ok?: boolean; status?: number; error?: string }
+      if (result.error) throw new Error(result.error)
+      error = result.ok
+        ? `Connection reachable (HTTP ${result.status ?? 'unknown'}).`
+        : (result.error ??
+          `Connection unreachable (HTTP ${result.status ?? 'unknown'}).`)
+    } catch (cause) {
+      error =
+        cause instanceof Error ? cause.message : 'Unable to test connection.'
+    }
+  }
   function openInTab() {
     if (active) void browser.tabs.create({ url: active.url })
   }
@@ -128,6 +146,10 @@
           >{connection.name}</option
         >{/each}
     </select>
+    {#if active}<button
+        type="button"
+        onclick={() => void testActiveConnection()}>Test connection</button
+      >{/if}
     <button
       type="button"
       onclick={openSettings}

@@ -19,6 +19,11 @@
   let url = ''
   let error = ''
   let status = ''
+  let editingId = ''
+  let editName = ''
+  let editUrl = ''
+  let testingId = ''
+  let testResults: Record<string, string> = {}
 
   async function send<T>(message: unknown): Promise<T> {
     const result = (await browser.runtime.sendMessage(message)) as T & {
@@ -60,6 +65,56 @@
     } catch (cause) {
       error =
         cause instanceof Error ? cause.message : 'Unable to add connection.'
+    }
+  }
+  function beginEdit(connection: Connection) {
+    editingId = connection.id
+    editName = connection.name
+    editUrl = connection.url
+    error = ''
+  }
+  function cancelEdit() {
+    editingId = ''
+  }
+  async function saveEdit(connection: Connection) {
+    error = ''
+    try {
+      settings = await send<Settings>({
+        type: 'connections:update',
+        id: connection.id,
+        input: { name: editName, url: editUrl }
+      })
+      editingId = ''
+      status = 'Connection updated.'
+    } catch (cause) {
+      error =
+        cause instanceof Error ? cause.message : 'Unable to update connection.'
+    }
+  }
+  async function testConnection(connection: Connection) {
+    testingId = connection.id
+    error = ''
+    try {
+      const result = await send<{
+        ok: boolean
+        status?: number
+        error?: string
+      }>({
+        type: 'connection:test',
+        url: connection.url
+      })
+      testResults = {
+        ...testResults,
+        [connection.id]: result.ok
+          ? `Reachable (HTTP ${result.status ?? 'unknown'}).`
+          : (result.error ??
+            `Unreachable (HTTP ${result.status ?? 'unknown'}).`)
+      }
+    } catch (cause) {
+      error =
+        cause instanceof Error ? cause.message : 'Unable to test connection.'
+    } finally {
+      testingId = ''
     }
   }
   async function remove(connection: Connection) {
@@ -147,18 +202,52 @@
   {#if !settings.connections.length}<p>No connections configured.</p>{/if}
   {#each settings.connections as connection}
     <div class="context-item">
-      <span
-        >{connection.name}<br /><small>{connection.url}</small
-        >{#if settings.defaultConnectionId === connection.id}<br /><small
-            >Default connection</small
-          >{/if}</span
-      >
-      <span class="actions">
-        {#if settings.defaultConnectionId !== connection.id}<button
-            onclick={() => void makeDefault(connection)}>Use by default</button
-          >{/if}
-        <button onclick={() => void remove(connection)}>Remove</button>
-      </span>
+      {#if editingId === connection.id}
+        <form
+          onsubmit={(event) => {
+            event.preventDefault()
+            void saveEdit(connection)
+          }}
+        >
+          <label
+            >Name<input bind:value={editName} required maxlength="100" /></label
+          >
+          <label
+            >Server URL<input
+              bind:value={editUrl}
+              required
+              maxlength="2048"
+            /></label
+          >
+          <button type="submit">Save</button>
+          <button type="button" onclick={cancelEdit}>Cancel</button>
+        </form>
+      {:else}
+        <span
+          >{connection.name}<br /><small>{connection.url}</small
+          >{#if settings.defaultConnectionId === connection.id}<br /><small
+              >Default connection</small
+            >{/if}
+          >{#if testResults[connection.id]}<br /><small role="status"
+              >{testResults[connection.id]}</small
+            >{/if}</span
+        >
+        <span class="actions">
+          {#if settings.defaultConnectionId !== connection.id}<button
+              onclick={() => void makeDefault(connection)}
+              >Use by default</button
+            >{/if}
+          <button onclick={() => beginEdit(connection)}>Edit</button>
+          <button
+            onclick={() => void testConnection(connection)}
+            disabled={testingId === connection.id}
+            >{testingId === connection.id
+              ? 'Testing…'
+              : 'Test connection'}</button
+          >
+          <button onclick={() => void remove(connection)}>Remove</button>
+        </span>
+      {/if}
     </div>
   {/each}
 

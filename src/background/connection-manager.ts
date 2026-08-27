@@ -1,6 +1,8 @@
 import { browser } from '../browser/platform'
 import type { Connection, Settings } from '../shared/types'
+import type { ConnectionInput } from '../shared/validation'
 import {
+  normalizeConnectionUrl,
   normalizeSettings,
   validateConnectionInput
 } from '../shared/validation'
@@ -39,7 +41,7 @@ export async function addConnection(input: unknown): Promise<Connection> {
 
 export async function updateConnection(
   id: string,
-  input: unknown
+  input: ConnectionInput
 ): Promise<Settings> {
   const validated = validateConnectionInput(input)
   const settings = await getSettings()
@@ -51,6 +53,40 @@ export async function updateConnection(
     updatedAt: Date.now()
   }
   return save(settings)
+}
+
+export async function validateConnectionReachability(
+  url: string
+): Promise<{ ok: boolean; status?: number; error?: string }> {
+  const target = normalizeConnectionUrl(url)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5_000)
+  try {
+    const response = await fetch(target, {
+      method: 'HEAD',
+      redirect: 'manual',
+      credentials: 'omit',
+      body: undefined,
+      signal: controller.signal
+    })
+    if (response.status >= 300 && response.status < 400)
+      return {
+        ok: false,
+        status: response.status,
+        error: `The connection returned an HTTP ${response.status} response.`
+      }
+    return { ok: response.ok, status: response.status }
+  } catch (cause) {
+    return {
+      ok: false,
+      error:
+        cause instanceof DOMException && cause.name === 'AbortError'
+          ? 'The connection test timed out.'
+          : 'The connection could not be reached.'
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 export async function removeConnection(id: string): Promise<Settings> {

@@ -2,12 +2,16 @@ import { browser, capabilities } from '../browser/platform'
 import {
   addConnection,
   getSettings,
+  validateConnectionReachability,
   removeConnection,
   setDefaultConnection,
   updateConnection,
   updateSettings
 } from './connection-manager'
-import { normalizeConnectionUrl } from '../shared/validation'
+import {
+  normalizeConnectionUrl,
+  validateConnectionInput
+} from '../shared/validation'
 import { readTabGroups } from '../browser/tab-groups'
 import { readTabs } from '../browser/tabs'
 import { readClipboardText } from '../browser/clipboard'
@@ -74,7 +78,10 @@ export async function routeMessage(
         return updateSettings(message.patch)
       case 'connections:update':
         if (!isId(message.id)) throw new Error('Invalid connection ID.')
-        return updateConnection(message.id, message.input)
+        return updateConnection(
+          message.id,
+          validateConnectionInput(message.input)
+        )
       case 'connections:remove':
         if (!isId(message.id)) throw new Error('Invalid connection ID.')
         return removeConnection(message.id)
@@ -206,6 +213,11 @@ export async function routeMessage(
           await removePermission(permission)
           return { ...state, [permission]: false }
         })
+      case 'connection:test': {
+        if (typeof message.url !== 'string')
+          throw new Error('Connection URL is required.')
+        return validateConnectionReachability(message.url)
+      }
       case 'connection:validate': {
         // Syntax validation is intentionally local. A remote fetch would require
         // broad host permissions before the user has approved a destination.
