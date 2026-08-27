@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill'
 import type { Connection, ContextItem, Settings } from '../shared/types'
-import { formatContext } from '../background/context-manager'
+import { formatContext } from '../shared/context-format'
 
 export { formatContext }
 
@@ -154,6 +154,14 @@ export async function exportContext(items: ContextItem[]): Promise<void> {
   if (!navigator.clipboard?.writeText)
     throw new Error('Copying is not available in this browser.')
   await navigator.clipboard.writeText(text)
+}
+
+export async function exportAndClearContext(
+  items: ContextItem[],
+  clearUnpinnedItems: () => Promise<ContextItem[]>
+): Promise<ContextItem[]> {
+  await exportContext(items)
+  return clearUnpinnedItems()
 }
 
 export function stage(item: ContextItem) {

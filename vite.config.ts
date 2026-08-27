@@ -48,6 +48,21 @@ const manifest = (mode: string) => ({
 })
 
 export default defineConfig(({ mode }) => ({
+  resolve: {
+    conditions: ['browser'],
+    alias: {
+      'svelte/internal/client': resolve(
+        'node_modules/svelte/src/internal/client/index.js'
+      ),
+      'svelte/internal/disclose-version': resolve(
+        'node_modules/svelte/src/internal/disclose-version.js'
+      ),
+      'svelte/internal/flags/legacy': resolve(
+        'node_modules/svelte/src/internal/flags/legacy.js'
+      ),
+      svelte: resolve('node_modules/svelte/src/index-client.js')
+    }
+  },
   plugins: [
     svelte(),
     {

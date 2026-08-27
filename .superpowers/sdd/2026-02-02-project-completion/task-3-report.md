@@ -29,4 +29,13 @@ Implemented Task 3 from the project-completion SDD without modifying the sibling
 - `npm run build` — passed for Chromium and Firefox, including build verification.
 - `git diff --check` — passed.
 
+## Review fix report
+
+- Added three behavioral tests that exercise the clipboard export API and mount `ContextTray` in a jsdom browser environment.
+- Refactored the pure formatter into `src/shared/context-format.ts`; export still redacts screenshot data URLs.
+- Export now clears through one operation only after `navigator.clipboard.writeText` succeeds, so failed writes retain all context.
+- Earlier Task 3 TDD evidence was limited: the original implementation and tests were committed together, so ordering was not independently auditable. This fix records red evidence before implementation changes and green evidence afterward.
+- Fix red evidence: the new focused suite initially failed because the required jsdom dependency was absent, then failed on the unimplemented behavioral path before the implementation was completed.
+- Fix green evidence: `npm test -- --run tests/unit/task-3-behavior.test.ts` — 3 passed.
+
 The build emits an existing Vite warning about `src/browser/tabs.ts` being both dynamically and statically imported; it does not fail the build.

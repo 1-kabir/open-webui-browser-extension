@@ -1,4 +1,7 @@
 import type { ContextItem } from '../shared/types'
+import { formatContext } from '../shared/context-format'
+
+export { formatContext }
 
 const MAX_ITEMS = 20
 let staged: ContextItem[] = []
@@ -47,16 +50,4 @@ export function setContext(items: ContextItem[]): ContextItem[] {
 export function clearUnpinnedContext(): ContextItem[] {
   staged = staged.filter((item) => item.pinned)
   return listContext()
-}
-
-export function formatContext(items: ContextItem[]): string {
-  return items
-    .map((item) => {
-      const source = item.sourceUrl ? `\nSource: ${item.sourceUrl}` : ''
-      const body = item.dataUrl
-        ? `[${item.title}]\nA screenshot is staged locally and is not included in this text export.`
-        : (item.text ?? '')
-      return `## ${item.title} (${item.kind})${source}\n\n${body}`
-    })
-    .join('\n\n---\n\n')
 }

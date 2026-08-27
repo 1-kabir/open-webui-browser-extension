@@ -5,7 +5,7 @@
   import {
     clearAll,
     clearUnpinned,
-    exportContext,
+    exportAndClearContext,
     loadPanelState,
     pin,
     readClipboardContext,
@@ -83,8 +83,7 @@
     exportNotice = ''
     exporting = true
     try {
-      await exportContext(context)
-      context = await clearUnpinned()
+      context = await exportAndClearContext(context, clearUnpinned)
       exportNotice = 'Context copied. Pinned items remain in the tray.'
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'Unable to copy context.'
