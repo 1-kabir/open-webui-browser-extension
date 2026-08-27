@@ -2,7 +2,7 @@
 
 ## Data flow
 
-The extension stores only connection metadata and preferences in browser extension storage. Page text, selections, HTML, clipboard contents, tab metadata, and screenshots are collected only after an explicit action and remain in the extension context until the user uses them.
+The extension stores only connection metadata and preferences in browser extension storage. Page text, selections, HTML, clipboard contents, tab metadata, and screenshots are collected only after an explicit action and remain memory-only in the extension context until the user uses or clears them. Staged context is not written to browser storage; it is lost when the service-worker restarts or the extension is reloaded.
 
 The extension does not install a model runtime, proxy authentication, read cookies, read `localStorage` tokens, inspect passwords, or transmit telemetry. Staged context is not sent to an Open WebUI server automatically; version 1 has no automatic message-submission or screenshot-upload contract.
 
@@ -32,8 +32,14 @@ The extension mitigates accidental collection and confused-deputy behavior by re
 
 Iframe embedding is best effort. If a server blocks framing or behaves differently in an iframe, use **Open in tab**, where normal browser origin and authentication behavior applies.
 
+## Retention and export
+
+- Context remains memory-only by default and is lost when the service worker restarts; connection metadata and preferences are the only persisted data.
+- Text export includes readable text and source URLs, but never screenshot data URLs. A successful export clears only unpinned items, preserving pinned items for reuse.
+- Clear all requires an explicit confirmation in the context tray.
+
 ## Limitations
 
 - Extension version 1 does not submit staged context into a chat composer automatically.
-- Screenshots and raw HTML are staged locally but require an explicit future attachment contract before transmission.
+- Screenshots and raw HTML are staged locally but require an explicit future attachment contract before transmission. Text export omits screenshot data URLs, and a successful export clears only unpinned context; pinned items remain until explicitly cleared.
 - Browser API support differs across Chromium and Firefox. Capability reports and fallback surfaces are authoritative.

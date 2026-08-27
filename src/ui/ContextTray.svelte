@@ -9,6 +9,20 @@
   export let onClear: (pinnedOnly: boolean) => void
   export let onExport: () => void
   export let exporting = false
+  let confirmClearAll = false
+
+  function requestClearAll() {
+    confirmClearAll = true
+  }
+
+  function cancelClearAll() {
+    confirmClearAll = false
+  }
+
+  function clearAll() {
+    confirmClearAll = false
+    onClear(false)
+  }
 
   const actions: Array<{ id: ContextAction; label: string; hint: string }> = [
     { id: 'page', label: 'Page', hint: 'Read the current page' },
@@ -110,9 +124,21 @@
       <button type="button" onclick={() => onClear(true)} disabled={busy}
         >Clear unpinned</button
       >
-      <button type="button" onclick={() => onClear(false)} disabled={busy}
-        >Clear all</button
-      >
+      {#if confirmClearAll}
+        <button
+          type="button"
+          onclick={clearAll}
+          disabled={busy}
+          aria-label="Confirm clear all context">Confirm clear all</button
+        >
+        <button type="button" onclick={cancelClearAll} disabled={busy}
+          >Cancel</button
+        >
+      {:else}
+        <button type="button" onclick={requestClearAll} disabled={busy}
+          >Clear all</button
+        >
+      {/if}
     </div>
   {:else}
     <p class="empty-tray">

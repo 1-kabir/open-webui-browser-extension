@@ -1,4 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { formatContext } from '../../src/background/context-manager'
+const privacySource = readFileSync(
+  new URL('../../docs/privacy-and-permissions.md', import.meta.url),
+  'utf8'
+)
+const traySource = readFileSync(
+  new URL('../../src/ui/ContextTray.svelte', import.meta.url),
+  'utf8'
+)
 import {
   clearContext,
   clearUnpinnedContext,
@@ -62,5 +72,28 @@ describe('context manager', () => {
     pinContext('pinned')
     stageContext(item('temporary', 'remove'))
     expect(clearUnpinnedContext().map((entry) => entry.id)).toEqual(['pinned'])
+  })
+
+  it('exports text without screenshot data URLs', () => {
+    const screenshot: ContextItem = {
+      ...item('shot', 'data:image/png;base64,secret'),
+      kind: 'screenshot',
+      dataUrl: 'data:image/png;base64,secret'
+    }
+    const result = formatContext([item('page', 'Readable text'), screenshot])
+    expect(result).toContain('Readable text')
+    expect(result).toContain('not included in this text export')
+    expect(result).not.toContain('data:image/png;base64,secret')
+  })
+
+  it('documents memory-only context and service-worker restart behavior', () => {
+    expect(privacySource).toContain('memory-only')
+    expect(privacySource).toContain('service-worker')
+    expect(privacySource).toContain('restart')
+  })
+
+  it('requires an explicit clear-all confirmation step', () => {
+    expect(traySource).toContain('confirmClearAll')
+    expect(traySource).toContain('Confirm clear all')
   })
 })

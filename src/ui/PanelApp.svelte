@@ -25,6 +25,7 @@
   let activeId = ''
   let context: ContextItem[] = []
   let error = ''
+  let exportNotice = ''
   let loading = true
   let busy = false
   let exporting = false
@@ -79,10 +80,12 @@
   }
   async function copyContext() {
     error = ''
+    exportNotice = ''
     exporting = true
     try {
       await exportContext(context)
       context = await clearUnpinned()
+      exportNotice = 'Context copied. Pinned items remain in the tray.'
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'Unable to copy context.'
     } finally {
@@ -169,6 +172,7 @@
     {exporting}
   />
   {#if error}<p class="notice" role="alert">{error}</p>{/if}
+  {#if exportNotice}<p class="success" role="status">{exportNotice}</p>{/if}
 
   {#if active}
     {#if frameState === 'blocked'}

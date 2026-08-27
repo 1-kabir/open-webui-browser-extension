@@ -1,5 +1,8 @@
 import browser from 'webextension-polyfill'
 import type { Connection, ContextItem, Settings } from '../shared/types'
+import { formatContext } from '../background/context-manager'
+
+export { formatContext }
 
 export async function request<T>(message: Record<string, unknown>): Promise<T> {
   const result = (await browser.runtime.sendMessage(message)) as
@@ -143,18 +146,6 @@ export async function readScreenshotContext(): Promise<ContextItem> {
     pinned: false,
     truncated: false
   }
-}
-
-export function formatContext(items: ContextItem[]): string {
-  return items
-    .map((item) => {
-      const source = item.sourceUrl ? `\nSource: ${item.sourceUrl}` : ''
-      const body = item.dataUrl
-        ? `[${item.title}]\nA screenshot is staged locally and is not included in this text export.`
-        : (item.text ?? '')
-      return `## ${item.title} (${item.kind})${source}\n\n${body}`
-    })
-    .join('\n\n---\n\n')
 }
 
 export async function exportContext(items: ContextItem[]): Promise<void> {
