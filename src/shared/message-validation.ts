@@ -11,6 +11,44 @@ const contextKinds = new Set([
   'html'
 ])
 
+export const extensionMessageTypes = new Set([
+  'settings:get',
+  'connections:add',
+  'settings:update',
+  'connections:update',
+  'connections:remove',
+  'connections:set-default',
+  'capabilities:get',
+  'tabs:read',
+  'tab-groups:read',
+  'clipboard:read',
+  'capture:visible',
+  'context:list',
+  'context:stage',
+  'context:remove',
+  'context:pin',
+  'context:clear',
+  'context:clear-unpinned',
+  'page:read',
+  'theme:get',
+  'navigation:get',
+  'permissions:get',
+  'permissions:remove',
+  'connection:validate'
+])
+
+export function isExtensionMessage(
+  value: unknown
+): value is Record<string, unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>).type === 'string' &&
+    extensionMessageTypes.has((value as Record<string, unknown>).type as string)
+  )
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
