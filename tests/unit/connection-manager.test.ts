@@ -80,6 +80,7 @@ describe('connection manager editing', () => {
 describe('bounded connection reachability', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   it('checks without credentials or context and accepts an ordinary response', async () => {
@@ -117,18 +118,36 @@ describe('bounded connection reachability', () => {
     })
   })
 
-  it('reports bounded timeout and network failure without exposing details', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new DOMException('aborted', 'AbortError'))
+  it('aborts a pending request after exactly five seconds', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            reject(new DOMException('aborted', 'AbortError'))
+          })
+        })
     )
-    await expect(
-      validateConnectionReachability('https://webui.example')
-    ).resolves.toEqual({
+    vi.stubGlobal('fetch', fetchMock)
+
+    const resultPromise = validateConnectionReachability(
+      'https://webui.example'
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    const request = fetchMock.mock.calls[0]?.[1]
+    expect(request?.signal?.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(4_999)
+    expect(request?.signal?.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+
+    await expect(resultPromise).resolves.toEqual({
       ok: false,
       error: 'The connection test timed out.'
     })
+    expect(request?.signal?.aborted).toBe(true)
+  })
 
+  it('reports network failure without exposing details', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockRejectedValue(new Error('secret host detail'))

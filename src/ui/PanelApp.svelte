@@ -106,7 +106,7 @@
     try {
       const result = (await browser.runtime.sendMessage({
         type: 'connection:test',
-        url: active.url
+        id: active.id
       })) as { ok?: boolean; status?: number; error?: string }
       if (result.error) throw new Error(result.error)
       error = result.ok

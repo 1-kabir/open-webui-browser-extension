@@ -214,9 +214,13 @@ export async function routeMessage(
           return { ...state, [permission]: false }
         })
       case 'connection:test': {
-        if (typeof message.url !== 'string')
-          throw new Error('Connection URL is required.')
-        return validateConnectionReachability(message.url)
+        if (!isId(message.id)) throw new Error('Invalid connection ID.')
+        const settings = await getSettings()
+        const connection = settings.connections.find(
+          (item) => item.id === message.id
+        )
+        if (!connection) throw new Error('Connection not found.')
+        return await validateConnectionReachability(connection.url)
       }
       case 'connection:validate': {
         // Syntax validation is intentionally local. A remote fetch would require
@@ -237,6 +241,7 @@ export async function routeMessage(
       'Bridge requests require a WebUI page sender.',
       'Bridge requests are only allowed from a configured Open WebUI origin.',
       'Invalid connection ID.',
+      'Connection not found.',
       'Invalid tab selection.',
       'Tab permission was not granted.',
       'Clipboard permission was not granted.',

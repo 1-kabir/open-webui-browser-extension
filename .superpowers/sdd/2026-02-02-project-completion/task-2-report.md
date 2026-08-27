@@ -33,3 +33,25 @@
 
 - A `HEAD` endpoint may be unsupported by some Open WebUI deployments even when `GET` would work; this is the deliberate body-free privacy-preserving probe required by the brief.
 - The repository-wide format check remains blocked by pre-existing SDD/plan document formatting outside the implementation source scope.
+
+## Review-fix report
+
+### Findings addressed
+
+- `connection:test` now requires a validated connection ID, loads settings, rejects missing or unknown IDs, and probes only the URL stored for that connection. Settings and panel UI actions now send IDs rather than raw URLs.
+- Added a Vitest fake-timer test with a pending fetch promise. It advances 4,999 ms without aborting, advances the final millisecond, verifies the abort signal, and asserts the generic timeout result.
+- Added router coverage for valid, missing, invalid, and unknown test IDs plus safe handling of unexpected probe failures. Added deterministic UI source checks covering edit, save, cancel, and test controls and confirming ID-based dispatch.
+
+### Review-fix validation
+
+- Initial focused run was intentionally red: the new router and timeout tests failed before the implementation/test corrections.
+- `npm test`: passed, 6 files / 39 tests.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed.
+- `git diff --check`: passed.
+- Changed source and test files were formatted with Prettier. The repository-wide `npm run format:check` limitation reported above remains unchanged.
+
+### Remaining concerns
+
+- UI coverage is deterministic source-level coverage rather than browser-rendered interaction tests because the repository has no Svelte component test harness or DOM test dependency. The assertions verify the shipped handlers and message payloads directly.
+

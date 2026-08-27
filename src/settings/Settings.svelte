@@ -101,7 +101,7 @@
         error?: string
       }>({
         type: 'connection:test',
-        url: connection.url
+        id: connection.id
       })
       testResults = {
         ...testResults,
