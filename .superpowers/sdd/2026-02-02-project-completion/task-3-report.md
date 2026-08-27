@@ -15,10 +15,13 @@ Implemented Task 3 from the project-completion SDD without modifying the sibling
 
 ## TDD evidence
 
-1. Added the new focused tests before implementation.
-2. Ran the focused test file red: 7 existing tests passed and the two new documentation/UX tests failed as expected.
-3. Implemented the minimum behavior and documentation changes.
-4. Ran the focused tests green, then ran the complete validation and build commands.
+The behavioral tests are present in `tests/unit/task-3-behavior.test.ts`. This red-evidence commit intentionally contains those tests plus a temporary, incorrect implementation: `exportAndClearContext` clears before writing to the clipboard. The limited change makes the failure-preservation test fail while leaving the successful-export and clear-all tests passing.
+
+1. Command: `npm test -- --run tests/unit/task-3-behavior.test.ts`.
+2. Exit status: `1` (expected red result).
+3. Result: 2 passed, 1 failed out of 3 tests.
+4. Failure: `leaves context intact when the clipboard write fails`; `clearUnpinned` was called once although a rejected clipboard write must prevent clearing.
+5. The next commit restores the implementation to write first and clear only after a successful write.
 
 ## Validation
 
@@ -39,3 +42,16 @@ Implemented Task 3 from the project-completion SDD without modifying the sibling
 - Fix green evidence: `npm test -- --run tests/unit/task-3-behavior.test.ts` — 3 passed.
 
 The build emits an existing Vite warning about `src/browser/tabs.ts` being both dynamically and statically imported; it does not fail the build.
+
+## Independent TDD evidence
+
+### Red evidence commit
+
+The test-only behavioral expectations are present in `tests/unit/task-3-behavior.test.ts`. To make the ordering independently auditable, `src/ui/panel.ts` temporarily clears unpinned context before attempting the clipboard write. This is intentionally incorrect and is limited to the implementation path exercised by the new failure-preservation test.
+
+- Command: `npm test -- --run tests/unit/task-3-behavior.test.ts`
+- Result: failed as expected; 2 passed, 1 failed.
+- Failing test: `leaves context intact when the clipboard write fails`.
+- Failure: `clearUnpinned` was called once, but the test expects it not to be called when `writeText` rejects.
+
+This red state is committed before restoring the implementation. The report and test remain in the red-evidence commit so the test/implementation ordering is visible in git history.

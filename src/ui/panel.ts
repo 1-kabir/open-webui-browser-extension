@@ -160,8 +160,9 @@ export async function exportAndClearContext(
   items: ContextItem[],
   clearUnpinnedItems: () => Promise<ContextItem[]>
 ): Promise<ContextItem[]> {
+  const remaining = await clearUnpinnedItems()
   await exportContext(items)
-  return clearUnpinnedItems()
+  return remaining
 }
 
 export function stage(item: ContextItem) {
