@@ -33,13 +33,13 @@ import {
   clearUnpinnedContext
 } from './context-manager'
 
-const bridgeTypes = new Set([
+const bridgeTypes = [
   'context:list',
   'context:stage',
   'context:remove',
   'theme:get',
   'navigation:get'
-])
+] as const
 
 export async function routeMessage(
   message: unknown,
@@ -47,7 +47,7 @@ export async function routeMessage(
 ): Promise<unknown> {
   try {
     if (!isExtensionMessage(message)) return { error: 'Unsupported request.' }
-    if (bridgeTypes.has(message.type as string)) {
+    if (bridgeTypes.includes(message.type as (typeof bridgeTypes)[number])) {
       const senderUrl = sender.tab?.url
       if (!sender.tab || sender.frameId !== 0 || !senderUrl)
         throw new Error('Bridge requests require a WebUI page sender.')
@@ -209,9 +209,11 @@ export async function routeMessage(
       case 'connection:validate': {
         // Syntax validation is intentionally local. A remote fetch would require
         // broad host permissions before the user has approved a destination.
+        if (typeof message.url !== 'string')
+          throw new Error('Connection URL is required.')
         return {
           ok: true,
-          url: normalizeConnectionUrl(String(message.url))
+          url: normalizeConnectionUrl(message.url)
         }
       }
       default:

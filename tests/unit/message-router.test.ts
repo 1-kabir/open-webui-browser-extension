@@ -92,6 +92,17 @@ describe('routeMessage', () => {
     })
   })
 
+  it.each([
+    ['missing', {}],
+    ['null', { url: null }],
+    ['object', { url: { value: 'https://webui.test' } }],
+    ['array', { url: ['https://webui.test'] }]
+  ])('rejects %s connection validation URLs', async (_label, input) => {
+    await expect(
+      routeMessage({ type: 'connection:validate', ...input }, sender())
+    ).resolves.toEqual({ error: 'Connection URL is required.' })
+  })
+
   it('does not expose unexpected exception details', async () => {
     listContext.mockImplementation(() => {
       throw new Error('database password: secret')

@@ -30,3 +30,23 @@
 
 - The repository-wide format check remains blocked by pre-existing formatting warnings in tracked documentation and plan files outside this task's scope.
 - The router retains the original broad switch implementation intentionally to minimize behavioral drift; later tasks can further refine message typing if needed.
+
+## Review fix report
+
+### Finding addressed
+
+`connection:validate` now requires `message.url` to be a string before normalization. Missing, `null`, object, and array values return the stable `Connection URL is required.` validation error instead of being coerced into strings. The supported-message and bridge-message allowlists are now readonly arrays, preserving membership behavior without mutable `Set` instances.
+
+### Tests and outputs
+
+- Before the fix: `npm test -- tests/unit/message-router.test.ts` failed 4 focused regression cases; coerced values included `https://undefined`, `https://null`, and accepted array values.
+- After the fix: `npm test -- tests/unit/message-router.test.ts`: passed, 1 file / 8 tests.
+- `npm test`: passed, 4 files / 24 tests.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed.
+- `git diff --check`: passed.
+- `npm run format:check`: remains blocked by pre-existing formatting warnings in `progress.md`, `task-1-brief.md`, and `docs/superpowers/plans/2026-02-02-project-completion.md`.
+
+### Commit
+
+- Fix committed separately after the original Task 1 implementation commit.

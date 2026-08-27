@@ -11,7 +11,7 @@ const contextKinds = new Set([
   'html'
 ])
 
-export const extensionMessageTypes = new Set([
+export const extensionMessageTypes = [
   'settings:get',
   'connections:add',
   'settings:update',
@@ -35,7 +35,7 @@ export const extensionMessageTypes = new Set([
   'permissions:get',
   'permissions:remove',
   'connection:validate'
-])
+] as const
 
 export function isExtensionMessage(
   value: unknown
@@ -45,7 +45,10 @@ export function isExtensionMessage(
     value !== null &&
     !Array.isArray(value) &&
     typeof (value as Record<string, unknown>).type === 'string' &&
-    extensionMessageTypes.has((value as Record<string, unknown>).type as string)
+    extensionMessageTypes.includes(
+      (value as Record<string, unknown>)
+        .type as (typeof extensionMessageTypes)[number]
+    )
   )
 }
 
