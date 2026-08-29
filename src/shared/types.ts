@@ -30,6 +30,7 @@ export interface CapabilityReport {
   clipboard: boolean
   capture: boolean
   fullPageCapture: boolean
+  contextTextInsert?: boolean
 }
 export interface ContextItem {
   id: string

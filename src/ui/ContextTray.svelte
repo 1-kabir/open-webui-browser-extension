@@ -9,6 +9,8 @@
   export let onClear: (pinnedOnly: boolean) => void
   export let onExport: () => void
   export let exporting = false
+  export let onInsert: (item: ContextItem) => void = () => {}
+  export let contextTextInsert = false
   let confirmClearAll = false
 
   function requestClearAll() {
@@ -118,6 +120,13 @@
       {/each}
     </div>
     <div class="tray-footer">
+      {#if contextTextInsert && onInsert}
+        <button
+          type="button"
+          onclick={() => onInsert(items[0])}
+          disabled={busy || exporting}>Insert into chat</button
+        >
+      {/if}
       <button type="button" onclick={onExport} disabled={busy || exporting}
         >{exporting ? 'Copying…' : 'Copy context'}</button
       >

@@ -18,7 +18,8 @@ const capabilities = {
   tabGroups: true,
   clipboard: false,
   capture: true,
-  fullPageCapture: false
+  fullPageCapture: false,
+  contextTextInsert: true
 }
 
 describe('browser-neutral bridge protocol', () => {
@@ -69,6 +70,45 @@ describe('browser-neutral bridge protocol', () => {
         nonce,
         type: 'event',
         payload: { name: 'context', data: 'x'.repeat(MAX_MESSAGE_BYTES) }
+      })
+    ).toBe(false)
+  })
+
+  it('rejects insertion payloads with images or oversized UTF-8 text', () => {
+    const item = {
+      id: 'item-1',
+      kind: 'page',
+      title: 'Page',
+      createdAt: 1,
+      truncated: false
+    }
+    expect(
+      isBridgeMessage({
+        protocol: BRIDGE_PROTOCOL,
+        version: 1,
+        id: 'request-1',
+        nonce,
+        type: 'event',
+        payload: {
+          name: 'context:insert-text',
+          data: {
+            text: 'text',
+            item: { ...item, dataUrl: 'data:image/png;base64,abc' }
+          }
+        }
+      })
+    ).toBe(false)
+    expect(
+      isBridgeMessage({
+        protocol: BRIDGE_PROTOCOL,
+        version: 1,
+        id: 'request-2',
+        nonce,
+        type: 'event',
+        payload: {
+          name: 'context:insert-text',
+          data: { text: '😀'.repeat(20_000), item }
+        }
       })
     ).toBe(false)
   })
@@ -143,5 +183,21 @@ describe('capability negotiation', () => {
         createBridgeMessage('request', nonce, { name: 'context:list' })
       )
     ).toBe(false)
+  })
+
+  it('includes contextTextInsert in capability report', () => {
+    const send = vi.fn()
+    const negotiator = new CapabilityNegotiator({ nonce, capabilities, send })
+    const hello = createBridgeMessage('hello', nonce, { client: 'open-webui' })
+    negotiator.handleHello(hello)
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          capabilities: expect.objectContaining({
+            contextTextInsert: true
+          })
+        })
+      })
+    )
   })
 })

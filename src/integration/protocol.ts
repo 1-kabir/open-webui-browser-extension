@@ -1,10 +1,11 @@
-import type { CapabilityReport } from '../shared/types'
+import type { CapabilityReport, ContextKind } from '../shared/types'
 
 export const BRIDGE_PROTOCOL = 'open-webui-browser-bridge'
 export const BRIDGE_VERSION = 1 as const
 export const MAX_MESSAGE_BYTES = 64 * 1024
 export const MAX_ID_LENGTH = 128
 export const MAX_NONCE_LENGTH = 128
+export const MAX_CONTEXT_TEXT_BYTES = 32 * 1024
 
 export type BridgeMessageType =
   'hello' | 'hello:ack' | 'capabilities' | 'request' | 'response' | 'event'
@@ -23,6 +24,10 @@ export interface HelloPayload {
   readonly connectionId?: string
 }
 
+export interface HelloAckPayload {
+  readonly capabilities?: Pick<CapabilityReport, 'contextTextInsert'>
+}
+
 export interface CapabilityPayload {
   readonly capabilities: CapabilityReport
 }
@@ -38,9 +43,27 @@ export interface ResponsePayload {
   readonly error?: { readonly code: string; readonly message: string }
 }
 
+export interface InsertTextItem {
+  readonly id: string
+  readonly kind: ContextKind
+  readonly title: string
+  readonly createdAt: number
+  readonly truncated: boolean
+}
+
+export interface InsertTextArgs {
+  readonly text: string
+  readonly item: InsertTextItem
+}
+
 export interface EventPayload {
   readonly name:
-    'capabilities' | 'context' | 'theme' | 'navigation' | 'connection'
+    | 'capabilities'
+    | 'context'
+    | 'context:insert-text'
+    | 'theme'
+    | 'navigation'
+    | 'connection'
   readonly data: unknown
 }
 
@@ -53,6 +76,16 @@ const types = new Set<BridgeMessageType>([
   'event'
 ])
 
+const contextKinds = new Set<ContextKind>([
+  'page',
+  'selection',
+  'tabs',
+  'tab-groups',
+  'clipboard',
+  'screenshot',
+  'html'
+])
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -60,6 +93,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isSafeString(value: unknown, maxLength: number): value is string {
   return (
     typeof value === 'string' && value.length > 0 && value.length <= maxLength
+  )
+}
+
+function utf8ByteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength
+}
+
+export function isBoundedContextText(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    utf8ByteLength(value) <= MAX_CONTEXT_TEXT_BYTES
+  )
+}
+
+export function isValidInsertTextArgs(value: unknown): value is InsertTextArgs {
+  if (!isRecord(value) || !isBoundedContextText(value.text)) return false
+  if (
+    Object.keys(value).some((key) => !new Set(['text', 'item']).has(key))
+  )
+    return false
+  if (!isRecord(value.item)) return false
+  const item = value.item
+  const allowedKeys = new Set(['id', 'kind', 'title', 'createdAt', 'truncated'])
+  if (Object.keys(item).some((key) => !allowedKeys.has(key))) return false
+  return (
+    isSafeString(item.id, MAX_ID_LENGTH) &&
+    typeof item.kind === 'string' &&
+    contextKinds.has(item.kind as ContextKind) &&
+    isSafeString(item.title, 500) &&
+    typeof item.createdAt === 'number' &&
+    Number.isFinite(item.createdAt) &&
+    typeof item.truncated === 'boolean'
   )
 }
 
@@ -100,7 +166,11 @@ export function isBridgeMessage(value: unknown): value is BridgeMessage {
   if (!isValidPayload(value.type as BridgeMessageType, value.payload))
     return false
   try {
-    return JSON.stringify(value).length <= MAX_MESSAGE_BYTES
+    const serialized = JSON.stringify(value)
+    return (
+      serialized !== undefined &&
+      utf8ByteLength(serialized) <= MAX_MESSAGE_BYTES
+    )
   } catch {
     return false
   }
@@ -120,14 +190,37 @@ function isValidPayload(type: BridgeMessageType, payload: unknown): boolean {
         isSafeString(payload.connectionId, MAX_ID_LENGTH))
     )
   }
-  if (type === 'capabilities') return isRecord(payload.capabilities)
-  if (type === 'request') return isSafeString(payload.name, MAX_ID_LENGTH)
-  if (type === 'event') {
+  if (type === 'hello:ack') {
+    if (payload.capabilities === undefined) return true
     return (
-      ['capabilities', 'context', 'theme', 'navigation', 'connection'].includes(
-        String(payload.name)
-      ) && 'data' in payload
+      isRecord(payload.capabilities) &&
+      (payload.capabilities.contextTextInsert === undefined ||
+        typeof payload.capabilities.contextTextInsert === 'boolean')
     )
+  }
+  if (type === 'capabilities') return isRecord(payload.capabilities)
+  if (type === 'request') {
+    if (!isSafeString(payload.name, MAX_ID_LENGTH)) return false
+    return payload.name === 'context:insert-text'
+      ? isValidInsertTextArgs(payload.args)
+      : true
+  }
+  if (type === 'event') {
+    if (
+      ![
+        'capabilities',
+        'context',
+        'context:insert-text',
+        'theme',
+        'navigation',
+        'connection'
+      ].includes(String(payload.name)) ||
+      !('data' in payload)
+    )
+      return false
+    return payload.name === 'context:insert-text'
+      ? isValidInsertTextArgs(payload.data)
+      : true
   }
   if (type === 'response') {
     return (
@@ -138,7 +231,7 @@ function isValidPayload(type: BridgeMessageType, payload: unknown): boolean {
           isSafeString(payload.error.message, MAX_MESSAGE_BYTES)))
     )
   }
-  return type === 'hello:ack'
+  return false
 }
 
 export function isAllowedBridgeOrigin(

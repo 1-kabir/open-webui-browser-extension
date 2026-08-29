@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import browser from 'webextension-polyfill'
+  import { createOpenWebUIBridge } from '../content/open-webui-bridge'
   import type { ContextItem, Settings } from '../shared/types'
   import ContextTray, { type ContextAction } from './ContextTray.svelte'
   import {
@@ -31,6 +33,9 @@
   let exporting = false
   let frameState: 'loading' | 'ready' | 'blocked' = 'loading'
   let frameTimer: ReturnType<typeof setTimeout> | undefined
+  let frameElement: HTMLIFrameElement | undefined
+  let pageBridge: ReturnType<typeof createOpenWebUIBridge> | undefined
+  let contextTextInsert = false
   $: active = settings.connections.find((item) => item.id === activeId)
 
   async function load() {
@@ -120,6 +125,57 @@
         cause instanceof Error ? cause.message : 'Unable to test connection.'
     }
   }
+  function stopPageBridge() {
+    pageBridge?.stop()
+    pageBridge = undefined
+    contextTextInsert = false
+  }
+
+  function startPageBridge() {
+    stopPageBridge()
+    if (!active || !frameElement?.contentWindow) return
+    let targetOrigin: string
+    try {
+      targetOrigin = new URL(active.url).origin
+    } catch {
+      return
+    }
+    const targetWindow = frameElement.contentWindow
+    pageBridge = createOpenWebUIBridge({
+      targetOrigin,
+      expectedSource: targetWindow,
+      postMessage: (message) => targetWindow.postMessage(message, targetOrigin),
+      onHostCapabilities: (hostCapabilities) => {
+        contextTextInsert =
+          typeof hostCapabilities === 'object' &&
+          hostCapabilities !== null &&
+          !Array.isArray(hostCapabilities) &&
+          (hostCapabilities as { contextTextInsert?: unknown })
+            .contextTextInsert === true
+      }
+    })
+    pageBridge.start()
+  }
+
+  async function insertText(item: ContextItem) {
+    error = ''
+    if (!contextTextInsert || !pageBridge) {
+      error = 'This Open WebUI page does not support text insertion.'
+      return
+    }
+    try {
+      await pageBridge.insertText(item)
+      exportNotice = 'Context inserted into the chat composer.'
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : 'Unable to insert text.'
+    }
+  }
+
+  function handleFrameLoad() {
+    frameState = 'ready'
+    startPageBridge()
+  }
+
   function openInTab() {
     if (active) void browser.tabs.create({ url: active.url })
   }
@@ -136,7 +192,14 @@
     activeId = ''
     setTimeout(() => (activeId = current), 0)
   }
-  $: if (active?.url) startFrameTimeout()
+  $: if (active?.url) {
+    startFrameTimeout()
+    stopPageBridge()
+  }
+  onDestroy(() => {
+    if (frameTimer) clearTimeout(frameTimer)
+    stopPageBridge()
+  })
   load()
 </script>
 
@@ -168,6 +231,8 @@
     onPin={togglePin}
     onClear={clear}
     onExport={copyContext}
+    onInsert={(item) => insertText(item)}
+    {contextTextInsert}
     {exporting}
   />
   {#if error}<p class="notice" role="alert">{error}</p>{/if}
@@ -188,9 +253,10 @@
           Loading Open WebUI…
         </p>{/if}
       <iframe
+        bind:this={frameElement}
         title={active.name}
         src={active.url}
-        onload={() => (frameState = 'ready')}
+        onload={handleFrameLoad}
       ></iframe>
     {/if}
   {:else}

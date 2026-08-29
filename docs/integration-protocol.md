@@ -59,6 +59,7 @@ The page must not be able to choose or reuse a nonce established for another pag
   - `context:stage`
   - `context:remove`
   - `navigation:get`
+  - `context:insert-text`: insert bounded plain text context (optional, requires capability acknowledgement)
 
 No arbitrary method name dispatch is permitted. Version 1 has no token, cookie, file-system, process, or unrestricted navigation request.
 
@@ -68,6 +69,7 @@ No arbitrary method name dispatch is permitted. Version 1 has no token, cookie, 
 - `response`: correlate a request with `{ ok, result? }` or a safe error.
 - `event` with allowlisted names:
   - `context`
+  - `context:insert-text`: bounded plain text plus sanitized metadata (optional)
   - `theme`
   - `navigation`
   - `connection`
@@ -86,6 +88,7 @@ interface CapabilityReport {
   clipboard: boolean
   capture: boolean
   fullPageCapture: boolean
+  contextTextInsert?: boolean
 }
 ```
 
@@ -94,6 +97,39 @@ Capabilities describe the current browser and permission state. They do not gran
 ## Context semantics
 
 Context collection is always initiated by an explicit user action in the extension UI or a supported Open WebUI control. The bridge may publish metadata and staged text after collection, but it does not submit a chat message automatically.
+
+### Text context insertion (optional)
+
+When the host acknowledges `contextTextInsert: true` in the capability report, the extension may expose an "Insert into chat" action. This action:
+
+1. Validates the context item has text and no `dataUrl` (images are rejected).
+2. Sends a `context:insert-text` request with bounded plain text and sanitized metadata (id, kind, title, createdAt, truncated).
+3. Waits for a response acknowledgement from the host.
+4. Never submits a chat message or handles tokens.
+
+Host-side implementation example:
+
+```js
+// In the Open WebUI page's message handler. The host must validate the
+// envelope, origin, source, nonce, and payload before this branch.
+if (
+  message.type === 'event' &&
+  message.payload.name === 'context:insert-text'
+) {
+  const { text, item } = message.payload.data
+  // Validate text is non-empty plain text <= 32 KiB and item contains only
+  // id, kind, title, createdAt, and truncated. Reject dataUrl/sourceUrl.
+  // Insert text into the composer without submitting a chat.
+  event.source?.postMessage({
+    protocol: 'open-webui-browser-bridge',
+    version: 1,
+    id: message.id,
+    nonce: message.nonce,
+    type: 'response',
+    payload: { ok: true, result: { inserted: true } }
+  }, event.origin)
+}
+```
 
 A staged context item includes:
 
