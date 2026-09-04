@@ -130,6 +130,35 @@ describe('open-webui-bridge text insertion contract', () => {
     bridge.stop()
   })
 
+  it('exposes an Insert action per context card when supported', async () => {
+    const onInsert = vi.fn()
+    const component = mount(ContextTray, {
+      target: document.body,
+      props: {
+        items: [
+          makeItem({ id: 'item-1', title: 'First' }),
+          makeItem({ id: 'item-2', title: 'Second' })
+        ],
+        onAction: vi.fn(),
+        onRemove: vi.fn(),
+        onPin: vi.fn(),
+        onClear: vi.fn(),
+        onExport: vi.fn(),
+        onInsert,
+        contextTextInsert: true
+      }
+    })
+    await tick()
+    const insertButtons = Array.from(
+      document.querySelectorAll('button[aria-label^="Insert "]')
+    ) as HTMLButtonElement[]
+    expect(insertButtons).toHaveLength(2)
+    insertButtons[1].click()
+    expect(onInsert).toHaveBeenCalledOnce()
+    expect(onInsert.mock.calls[0][0].id).toBe('item-2')
+    unmount(component)
+  })
+
   it('rejects oversized text and image context before posting', async () => {
     const { bridge, posted } = createTestBridge()
     bridge.start()
@@ -195,7 +224,7 @@ describe('open-webui-bridge text insertion contract', () => {
     bridge.stop()
   })
 
-  it('shows Insert into chat only when host support is acknowledged and retains Copy context', async () => {
+  it('shows per-card Insert only when host support is acknowledged and retains Copy context', async () => {
     const onInsert = vi.fn()
     const component = mount(ContextTray, {
       target: document.body,
@@ -228,10 +257,11 @@ describe('open-webui-bridge text insertion contract', () => {
       }
     })
     await tick()
-    const insert = Array.from(document.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Insert into chat'
-    ) as HTMLButtonElement
+    const insert = Array.from(
+      document.querySelectorAll('button[aria-label^="Insert "]')
+    )[0] as HTMLButtonElement
     insert.click()
+    expect(onInsert.mock.calls[0][0].id).toBe('item-1')
     expect(onInsert).toHaveBeenCalledOnce()
     expect(document.body.textContent).toContain('Copy context')
     unmount(supported)

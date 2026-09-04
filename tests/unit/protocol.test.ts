@@ -113,6 +113,41 @@ describe('browser-neutral bridge protocol', () => {
     ).toBe(false)
   })
 
+  it('rejects context:insert-text as a page-to-extension request', () => {
+    const args = {
+      text: 'hello world',
+      item: {
+        id: 'item-1',
+        kind: 'page',
+        title: 'Page title',
+        createdAt: 1,
+        truncated: false
+      }
+    }
+    expect(
+      isBridgeMessage({
+        protocol: BRIDGE_PROTOCOL,
+        version: 1,
+        id: 'request-3',
+        nonce,
+        type: 'request',
+        payload: { name: 'context:insert-text', args }
+      })
+    ).toBe(false)
+  })
+
+  it('derives contextTextInsert support from the environment', async () => {
+    const { supportsContextTextInsert } =
+      await import('../../src/integration/protocol')
+    expect(supportsContextTextInsert()).toBe(true)
+    vi.stubGlobal('crypto', {})
+    try {
+      expect(supportsContextTextInsert()).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('allows only the exact non-null expected origin', () => {
     expect(
       isAllowedBridgeOrigin('https://webui.example', 'https://webui.example')

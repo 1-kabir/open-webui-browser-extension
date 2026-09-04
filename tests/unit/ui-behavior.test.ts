@@ -9,6 +9,28 @@ const panelSource = readFileSync(
   new URL('../../src/ui/PanelApp.svelte', import.meta.url),
   'utf8'
 )
+const contentSource = readFileSync(
+  new URL('../../src/content/content.ts', import.meta.url),
+  'utf8'
+)
+const protocolSource = readFileSync(
+  new URL('../../src/integration/protocol.ts', import.meta.url),
+  'utf8'
+)
+
+describe('text insertion request-path contract', () => {
+  it('does not offer context:insert-text as a page-to-extension request', () => {
+    // The documented page->extension request path is removed; insertion uses
+    // only the extension->page event path, so the content script never
+    // validates or forwards an insertion request and the protocol request
+    // validator must not special-case the name.
+    expect(contentSource).not.toContain("'context:insert-text'")
+    expect(contentSource).not.toContain('isValidInsertTextArgs')
+    expect(protocolSource).toMatch(
+      /if \(type === 'request'\) \{\s*\n\s*\/\/ Text insertion flows only through/
+    )
+  })
+})
 
 describe('connection UI behavior', () => {
   it('uses the persisted connection ID for testing', () => {
