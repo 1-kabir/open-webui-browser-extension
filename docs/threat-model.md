@@ -30,7 +30,7 @@ Actors:
 
 - **Configured Open WebUI server.** Anything the user copies or inserts can reach this server. The extension cannot make a compromised or malicious server trustworthy; treat every configured server as an external origin.
 - **Embedded page iframe.** The page runs at its own origin with normal web privileges. It receives no extension APIs. The bridge is the only channel, and it is unidirectionally validated.
-- **Web pages sending bridge messages.** Every bridge message must match the expected protocol name and version, the configured origin, the expected source window, and the current per-page random nonce. Messages from sub-frames, `null` origins, other origins, or stale sessions are ignored. Replayed request IDs are accepted once per session and then rejected. Unknown message types are ignored safely.
+- **Web pages sending bridge messages.** Every bridge message must match the expected protocol name and version, the configured origin, the expected source window, and the current per-page random nonce. Messages from sub-frames, `null` origins, other origins, or stale sessions are ignored. Replayed request IDs are accepted once per session; later duplicates are silently ignored. Unknown message types are ignored safely.
 - **Extension messages.** Runtime messages are validated against an allowlist of known types with bounded payloads. Bridge-scoped request types (`context:list`, `context:stage`, `context:remove`, `theme:get`, `navigation:get`) are additionally restricted to senders on a configured Open WebUI origin with `frameId === 0`. Unknown or malformed messages receive a generic safe error, never a stack trace or internal state.
 
 ## Permission model

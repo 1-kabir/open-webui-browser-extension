@@ -1,6 +1,6 @@
 {
   "name": "open-webui-browser-extension",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A privacy-first cross-browser extension for Open WebUI.",
   "license": "AGPL-3.0-only",

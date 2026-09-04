@@ -1,2 +1,5 @@
 # Pre-existing working-tree change; do not reformat application source in CI.
 src/background/context-manager.ts
+# Agent workflow records; not user-facing docs.
+.superpowers/
+docs/superpowers/

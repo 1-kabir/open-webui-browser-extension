@@ -9,8 +9,11 @@ The extension is an independent, community project for the Open WebUI ecosystem.
 - Connect to one or more Open WebUI servers (remote HTTPS or localhost), embedded in a side panel (Chromium), sidebar (Firefox), or extension-tab fallback, with "Open in browser tab" when embedding is blocked.
 - Explicit, click-only context staging: current page text, selection, raw HTML, clipboard text, open tabs, tab groups (native on Chromium, window fallback on Firefox), and visible-tab screenshots.
 - Bounded payloads with visible previews, pinning, per-item removal, clear-all confirmation, and text export to the clipboard.
-- Optional, capability-gated text insertion into the Open WebUI composer. The extension never submits messages automatically, never uploads screenshots or attachments, and never reads credentials.
+- Connection testing from both the panel and the settings page, with reachable/unreachable feedback for each configured server.
+- Optional, capability-gated text insertion into the Open WebUI composer via the versioned page-bridge contract. The extension never submits messages automatically, never uploads screenshots or attachments, and never reads credentials.
 - Memory-only context: staged content is never written to disk and is lost when the background worker restarts. Only connection metadata and preferences persist.
+- Keyboard-accessible controls with visible focus indicators, `prefers-reduced-motion` support, and live-region status/error announcements.
+- Deterministic unit test suite, optional Playwright browser smoke checks, and a manifest-verifying build for both Chromium and Firefox targets.
 
 ## Development
 
