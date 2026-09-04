@@ -44,3 +44,6 @@ Task 7: minor (deferred, polish): third a11y test could assert a dynamic live-re
 Task 7: minor (deferred, polish): reduced-motion block uses !important on * — blunt but conventional.
 Task 7: minor (deferred, polish): pre-existing src/background/context-manager.ts prettier exclusion should be lifted and the file formatted in a future pass.
 Task 7: complete (commits f43bcfe..54fc3c0, review clean; spec PASS, quality APPROVED)
+Final review: F-1 fixed (manifest version now derived from package.json; verify-build asserts consistency; commit f0d9a58-range on project-completion). F-2: bridge-origin guard vs extension-page senders is pre-branch behavior, unchanged by this branch — parked with a post-merge manual runtime check of tray load/stage as the first action.
+Final review: deferred minors — none block merge (Task 5 format debt resolved by prettierignore; others parked as polish).
+Final review: docs drift — integration protocol "cleared after successful user submission" is aspirational in v1 (only export clears unpinned); parked for a future docs pass.
