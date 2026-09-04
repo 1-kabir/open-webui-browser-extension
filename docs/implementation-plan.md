@@ -23,7 +23,11 @@ open-webui-browser-extension/
 ├── docs/
 │   ├── implementation-plan.md
 │   ├── integration-protocol.md
-│   └── privacy-and-permissions.md
+│   ├── privacy-and-permissions.md
+│   ├── compatibility.md
+│   ├── installation.md
+│   ├── troubleshooting.md
+│   └── threat-model.md
 ├── src/
 │   ├── background/
 │   │   ├── service-worker.ts
@@ -255,3 +259,14 @@ The final report must include the exact commands run, browser versions tested, r
 8. Capture and vision/text fallback.
 9. Composer integration.
 10. Hardening, documentation, and upstream proposal.
+
+## Implementation status
+
+The first production-oriented slice described by this plan is implemented and validated (`npm run validate` and `npm run build` pass in CI and locally). Implemented behavior differs from the original phase list in documented, deliberate ways:
+
+- **Composer integration is optional and event-only.** There is no stable upstream browser hook to build against, so text insertion flows through the extension-to-page `context:insert-text` bridge event, gated on the page's `contextTextInsert` capability. The extension never auto-submits, and there is no attachment or screenshot-upload contract. When insertion is unavailable, copying formatted context and pasting is the universal fallback.
+- **Context is memory-only.** Staged context is never persisted; it is lost when the background service worker restarts. Pinned items survive clear-unpinned and post-export clearing but not restarts.
+- **Capture is visible-tab only.** `fullPageCapture` is always `false` in the capability report; screenshots are bounded at 8 MiB and excluded from text export.
+- **Tab groups on Firefox** use a documented window-based fallback rather than the native Chromium group API.
+
+User-facing behavior, browser support, permissions, restricted pages, and installation steps are documented in [compatibility.md](compatibility.md), [installation.md](installation.md), [troubleshooting.md](troubleshooting.md), and [threat-model.md](threat-model.md). Browser automation smoke tests are planned as a follow-up; the current quality gate is the unit suite plus the build's manifest verification.
