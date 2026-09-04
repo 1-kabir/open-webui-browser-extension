@@ -1,12 +1,18 @@
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { resolve } from 'node:path'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
+
+// Single source of truth: the generated manifest version always matches
+// package.json so a release bump cannot silently ship a stale extension.
+const packageVersion = (
+  JSON.parse(readFileSync('package.json', 'utf8')) as { version: string }
+).version
 
 const manifest = (mode: string) => ({
   manifest_version: 3,
   name: 'Open WebUI Browser Extension',
-  version: '0.1.0',
+  version: packageVersion,
   description: 'Connect to Open WebUI and add browser context to your chats.',
   permissions: ['storage', ...(mode === 'chromium' ? ['sidePanel'] : [])],
   optional_permissions: ['tabs', 'activeTab', 'scripting', 'clipboardRead'],

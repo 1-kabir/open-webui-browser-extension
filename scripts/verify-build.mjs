@@ -35,6 +35,13 @@ for (const [target, expected] of Object.entries(targets)) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   if (manifest.manifest_version !== 3)
     throw new Error(`${target}: manifest version must be 3`)
+  const packageVersion = JSON.parse(
+    readFileSync('package.json', 'utf8')
+  ).version
+  if (manifest.version !== packageVersion)
+    throw new Error(
+      `${target}: manifest version ${manifest.version} does not match package.json ${packageVersion}`
+    )
   if (
     !Array.isArray(manifest.permissions) ||
     !manifest.permissions.includes('storage')
