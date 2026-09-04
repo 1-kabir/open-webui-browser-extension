@@ -11,5 +11,6 @@
     "types": ["node", "chrome", "webextension-polyfill"],
     "lib": ["ESNext", "DOM"]
   },
-  "include": ["src", "tests", "vite.config.ts"]
+  "include": ["src", "tests", "vite.config.ts"],
+  "exclude": ["node_modules", "dist", "tests/browser"]
 }

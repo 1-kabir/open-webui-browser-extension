@@ -20,6 +20,22 @@ npm run build
 
 A successful build uploads Chromium and Firefox bundles as a short-lived workflow artifact. Generated files remain under `dist/`, which is ignored and must not be committed.
 
+## Optional browser smoke tests
+
+```bash
+npm run test:browser
+```
+
+This command builds the extension and runs Playwright smoke tests against the built `dist/chromium` and `dist/firefox` artifacts. It is **not** part of `npm run validate` or the CI quality gate.
+
+Behavior when browsers are not available:
+
+- The harness probes for runnable Chromium and Firefox binaries before running. A binary that exists but cannot launch (for example, missing shared libraries) counts as unavailable.
+- If no browser can run, the suite is reported as **skipped with an explicit "unavailable" message** — it is not silently passed. The command output states that browser binaries are unavailable and how to install them.
+- To enable the suite locally, run `npx playwright install chromium firefox` (and install any missing OS-level shared libraries reported by `npx playwright install-deps`).
+
+Playwright artifacts (`test-results/`, `playwright-report/`) are generated locally and are git-ignored.
+
 ## Security analysis and dependency updates
 
 - CodeQL analyzes JavaScript and TypeScript on pull requests, pushes to `main`, and weekly.

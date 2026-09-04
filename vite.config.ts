@@ -48,6 +48,10 @@ const manifest = (mode: string) => ({
 })
 
 export default defineConfig(({ mode }) => ({
+  // Vitest reads this config too; browser smoke specs belong to Playwright.
+  test: {
+    exclude: ['node_modules/**', 'dist/**', 'tests/browser/**']
+  },
   resolve: {
     conditions: ['browser'],
     alias: {
