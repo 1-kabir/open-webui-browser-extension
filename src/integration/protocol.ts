@@ -108,16 +108,33 @@ export function isBoundedContextText(value: unknown): value is string {
   )
 }
 
+const insertTextArgsKeys = new Set(['text', 'item'])
+const insertTextItemKeys = new Set([
+  'id',
+  'kind',
+  'title',
+  'createdAt',
+  'truncated'
+])
+
+/**
+ * Text insertion support requires a runtime random UUID source for the
+ * bridge nonce and per-message acknowledgement IDs.
+ */
+export function supportsContextTextInsert(): boolean {
+  return (
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+  )
+}
+
 export function isValidInsertTextArgs(value: unknown): value is InsertTextArgs {
   if (!isRecord(value) || !isBoundedContextText(value.text)) return false
-  if (
-    Object.keys(value).some((key) => !new Set(['text', 'item']).has(key))
-  )
+  if (Object.keys(value).some((key) => !insertTextArgsKeys.has(key)))
     return false
   if (!isRecord(value.item)) return false
   const item = value.item
-  const allowedKeys = new Set(['id', 'kind', 'title', 'createdAt', 'truncated'])
-  if (Object.keys(item).some((key) => !allowedKeys.has(key))) return false
+  if (Object.keys(item).some((key) => !insertTextItemKeys.has(key)))
+    return false
   return (
     isSafeString(item.id, MAX_ID_LENGTH) &&
     typeof item.kind === 'string' &&
@@ -200,10 +217,9 @@ function isValidPayload(type: BridgeMessageType, payload: unknown): boolean {
   }
   if (type === 'capabilities') return isRecord(payload.capabilities)
   if (type === 'request') {
-    if (!isSafeString(payload.name, MAX_ID_LENGTH)) return false
-    return payload.name === 'context:insert-text'
-      ? isValidInsertTextArgs(payload.args)
-      : true
+    // Text insertion flows only through the extension-to-page event path;
+    // page-to-extension insertion requests are intentionally unsupported.
+    return isSafeString(payload.name, MAX_ID_LENGTH)
   }
   if (type === 'event') {
     if (

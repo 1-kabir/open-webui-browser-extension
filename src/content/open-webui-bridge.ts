@@ -4,6 +4,7 @@ import {
   isBridgeMessageEvent,
   isBridgeMessage,
   isValidInsertTextArgs,
+  supportsContextTextInsert,
   MAX_CONTEXT_TEXT_BYTES,
   type BridgeMessage,
   type RequestPayload,
@@ -113,7 +114,10 @@ export function createOpenWebUIBridge(
     options.capabilityReport
       ? Promise.resolve(options.capabilityReport)
       : capabilities()
-  ).then((report) => ({ ...report, contextTextInsert: true }))
+  ).then((report) => ({
+    ...report,
+    contextTextInsert: supportsContextTextInsert()
+  }))
   let started = false
   let negotiator: CapabilityNegotiator | undefined
 
@@ -278,6 +282,8 @@ export function createOpenWebUIBridge(
       name: 'context:insert-text',
       data: args
     })
+    if (!isBridgeMessage(message))
+      return Promise.reject(new Error('Invalid text insertion payload.'))
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {

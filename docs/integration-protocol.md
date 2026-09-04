@@ -59,9 +59,8 @@ The page must not be able to choose or reuse a nonce established for another pag
   - `context:stage`
   - `context:remove`
   - `navigation:get`
-  - `context:insert-text`: insert bounded plain text context (optional, requires capability acknowledgement)
 
-No arbitrary method name dispatch is permitted. Version 1 has no token, cookie, file-system, process, or unrestricted navigation request.
+No arbitrary method name dispatch is permitted. Version 1 has no token, cookie, file-system, process, or unrestricted navigation request. Text insertion is intentionally absent from the page-to-extension request set; it flows only through the extension-to-page `context:insert-text` event below.
 
 ### Extension to page
 
@@ -100,10 +99,10 @@ Context collection is always initiated by an explicit user action in the extensi
 
 ### Text context insertion (optional)
 
-When the host acknowledges `contextTextInsert: true` in the capability report, the extension may expose an "Insert into chat" action. This action:
+When the host acknowledges `contextTextInsert: true` in the capability report, the extension exposes a per-item "Insert" action on each text context card. This action:
 
 1. Validates the context item has text and no `dataUrl` (images are rejected).
-2. Sends a `context:insert-text` request with bounded plain text and sanitized metadata (id, kind, title, createdAt, truncated).
+2. Sends an extension-to-page `context:insert-text` event with bounded plain text and sanitized metadata (id, kind, title, createdAt, truncated).
 3. Waits for a response acknowledgement from the host.
 4. Never submits a chat message or handles tokens.
 
@@ -120,14 +119,17 @@ if (
   // Validate text is non-empty plain text <= 32 KiB and item contains only
   // id, kind, title, createdAt, and truncated. Reject dataUrl/sourceUrl.
   // Insert text into the composer without submitting a chat.
-  event.source?.postMessage({
-    protocol: 'open-webui-browser-bridge',
-    version: 1,
-    id: message.id,
-    nonce: message.nonce,
-    type: 'response',
-    payload: { ok: true, result: { inserted: true } }
-  }, event.origin)
+  event.source?.postMessage(
+    {
+      protocol: 'open-webui-browser-bridge',
+      version: 1,
+      id: message.id,
+      nonce: message.nonce,
+      type: 'response',
+      payload: { ok: true, result: { inserted: true } }
+    },
+    event.origin
+  )
 }
 ```
 

@@ -84,6 +84,16 @@
               >
             </div>
             <div class="context-card-actions">
+              {#if contextTextInsert && onInsert && !item.dataUrl}
+                <button
+                  type="button"
+                  onclick={() => onInsert(item)}
+                  disabled={busy || exporting}
+                  aria-label={`Insert ${item.title} into chat`}
+                >
+                  Insert
+                </button>
+              {/if}
               <button
                 type="button"
                 onclick={() => onPin(item)}
@@ -120,13 +130,6 @@
       {/each}
     </div>
     <div class="tray-footer">
-      {#if contextTextInsert && onInsert}
-        <button
-          type="button"
-          onclick={() => onInsert(items[0])}
-          disabled={busy || exporting}>Insert into chat</button
-        >
-      {/if}
       <button type="button" onclick={onExport} disabled={busy || exporting}
         >{exporting ? 'Copying…' : 'Copy context'}</button
       >
