@@ -40,3 +40,7 @@ Task 4: fix round 1/5 (3 Important + 4 Minor addressed; commits c043ef8..9a83957
 Task 4: ruling — evidence-file test-count note corrected in the ignored SDD workspace per re-review recommendation (dropped exploratory assertion was part of the red run and fails in both states); no re-cut of implementation commits required.
 Task 4: complete (commits 3bff42e..9a83957, review clean)
 Task 5: complete (commit d2346c5, documentation-only; all documented commands and paths verified against the repo; 55/55 tests unchanged; validate's format:check has 4 pre-existing warnings in .superpowers/ and docs/superpowers/ confirmed present at baseline 9a83957 — parked as follow-up)
+Task 7: minor (deferred, polish): third a11y test could assert a dynamic live-region state transition, not just the tray aria-label.
+Task 7: minor (deferred, polish): reduced-motion block uses !important on * — blunt but conventional.
+Task 7: minor (deferred, polish): pre-existing src/background/context-manager.ts prettier exclusion should be lifted and the file formatted in a future pass.
+Task 7: complete (commits f43bcfe..54fc3c0, review clean; spec PASS, quality APPROVED)
