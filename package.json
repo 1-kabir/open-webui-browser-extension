@@ -28,7 +28,7 @@
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@types/chrome": "^0.0.280",
-    "@types/node": "^26.3.0",
+    "@types/node": "^26.6.3",
     "@types/webextension-polyfill": "^0.12.3",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
